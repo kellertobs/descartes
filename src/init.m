@@ -31,12 +31,25 @@ Xf        = (Xc(1:end-1)+Xc(2:end))./2;
 Zf        = (Zc(1:end-1)+Zc(2:end))./2;
 [XXu,ZZu] = meshgrid(Xf,Zc);
 [XXw,ZZw] = meshgrid(Xc,Zf);
+[XXco,ZZco] = meshgrid(Xf,Zf);
 Xc        = Xc(2:end-1);
 Zc        = Zc(2:end-1);
 [XX,ZZ]   = meshgrid(Xc,Zc);
 
-Nx = length(Xc);
-Nz = length(Zc);
+hf        = h/4;
+Xcf       = hf/2:hf:L-hf/2;
+Zcf       = hf/2:hf:D-hf/2;
+[XXf,ZZf] = meshgrid(Xcf,Zcf);
+Xcfg      = -hf/2:hf:L+hf/2;
+Zcfg      = -hf/2:hf:D+hf/2;
+[XXfg,ZZfg] = meshgrid(Xcfg,Zcfg);
+Xff        = (Xcfg(1:end-1)+Xcfg(2:end))./2;
+Zff        = (Zcfg(1:end-1)+Zcfg(2:end))./2;
+[XXuf,ZZuf] = meshgrid(Xff,Zcfg);
+[XXwf,ZZwf] = meshgrid(Xcfg,Zff);
+
+Nx = length(Xc);  Nxf = length(Xcf);
+Nz = length(Zc);  Nzf = length(Zcf);
 
 % get smoothed initialisation field
 rng(seed);
@@ -52,6 +65,7 @@ rng(seed);
 NP = (Nz+2) * (Nx+2);
 NW = (Nz+1) * (Nx+2);
 NU = (Nz+2) * (Nx+1);
+NC =  Nzf   *  Nxf  ;
 MapP = reshape(1:NP,Nz+2,Nx+2);
 MapW = reshape(1:NW,Nz+1,Nx+2);
 MapU = reshape(1:NU,Nz+2,Nx+1) + NW;
@@ -76,33 +90,26 @@ P   =  zeros(Nz+2,Nx+2);  Vel = 0.*P; upd_P = 0*P;
 SOL = [W(:);U(:);P(:)];
 
 % initialise particle fields
-np = round(D*L*fp./(pi.*rp.^2));
-nr = 1; ir = 1; jr = 1; d = 0;
-for ip = 1:Np
-    xp = rand(np(ip),1).*L;
-    zp = rand(np(ip),1).*D;
-    xp(xp>L) = xp(xp>L)-L;  xp(xp<0) = xp(xp<0)+L;
-    zp(zp>D) = zp(zp>D)-D;  zp(zp<0) = zp(zp<0)+D;
-    figure(1); clf; plot(xp,zp,'ko');
-    while nr>0
-        d = (sqrt((xp-xp').^2 + (zp-zp').^2));
-        Fxp = mean((xp-xp')./max(1e-3,(xp-xp').^2)).'/1000; Fxp = Fxp-mean(Fxp(:));
-        Fzp = mean((zp-zp')./max(1e-3,(zp-zp').^2)).'/1000; Fzp = Fzp-mean(Fzp(:));
-        xp = xp - Fxp;
-        zp = zp - Fzp;
-        xp(xp>L) = xp(xp>L)-L;  xp(xp<0) = xp(xp<0)+L;
-        zp(zp>D) = zp(zp>D)-D;  zp(zp<0) = zp(zp<0)+D;
-        % d  = triu(sqrt((xp-xp').^2 + (zp-zp').^2));
-        % [ir,jr] = find(d>0 & (d<=mean(d(:))/5 | d>=mean(d(:))*5));
-        % nr = length(ir);
-        plot(xp,zp,'ko');
-    end
+[xp, zp, tp] = generate_particles(Np, rp, fp, D, L, ptol);
 
+C = zeros(Nzf,Nxf,Np);
+for ip = 1:length(xp)
+    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XXf-xp(ip)).^2 + (ZZf-zp(ip)).^2) < rp(tp(ip))));
 end
 
-% initialise auxiliary variables 
-dCdt   = 0.*C;  dCdto  = dCdt;
+% initialise auxiliary parameters 
+Co = C;  Coo = Co;
+dCdt   = 0.*C;  dCdto  = dCdt;  dCdtoo = dCdto;
 upd_C  = 0.*C;
+dto = dt;
+a1 = 1; a2 = 1; a3 = 0;
+b1 = 1; b2 = 0; b3 = 0;
+
+% initialise coefficient fields
+update;
+
+rhoW = rhofz.*W(2:end-1,2:end-1); rhoWo = rhoW; rhoWoo = rhoWo;
+rhoU = rhofx.*U(2:end-1,2:end-1); rhoUo = rhoU; rhoUoo = rhoUo;
 
 % initialise timing and iterative parameters
 frst    = 1;
@@ -152,9 +159,88 @@ else
     % complete, plot, and save initial condition
     fluidmech;
     update;
-    history;
+    % history;
     output;
     step = step+1;
 end
 
 restart = 0;
+
+function [px, pz, pt] = generate_particles(Np, rp, fp, D, L, tol)
+    % Inputs:
+    % Np  - number of particle types (e.g. 2 for two particle types)
+    % rp  - vector of particle radii [rp1, rp2, ...]
+    % fp  - vector of area fractions [fp1, fp2, ...] for each particle type
+    % D   - width of the rectangular domain
+    % L   - length of the rectangular domain
+    % tol - tolerance for the minimum allowed spacing between particles (percentage of particle radius)
+    
+    % Outputs:
+    % x_coords, y_coords - arrays of particle coordinates
+    % particle_type - array denoting the type of each particle
+    
+    % Calculate total domain area
+    domain_area = D * L;
+    
+    % Initialize variables for particle storage
+    px = [];
+    pz = [];
+    pt = [];
+    
+    for t = 1:Np
+        % Area to be occupied by particle type t
+        target_area = fp(t) * domain_area;
+        % Calculate number of particles of type t based on area fraction
+        num_particles = round(target_area / (pi * rp(t)^2));
+        
+        for i = 1:num_particles
+            placed = false;
+            while ~placed
+                % Randomly place particle inside the domain
+                x = rand() * L;
+                y = rand() * D;
+                
+                % Check if the new particle overlaps with any existing particles
+                min_dist = tol * (rp(t)+rp(pt));  % Minimum distance between particles (scaled by tolerance)
+                overlaps = false;
+                
+                for j = 1:length(px)
+                    dist = sqrt((x - px(j))^2 + (y - pz(j))^2);
+                    if dist < min_dist
+                        overlaps = true;
+                        break;
+                    end
+                end
+                
+                if ~overlaps
+                    % If no overlap, store the particle
+                    px = [px; x];
+                    pz = [pz; y];
+                    pt = [pt; t];
+                    placed = true;
+                end
+            end
+        end
+    end
+    
+    px = [px;px(px<0+max(rp))+L]; pz = [pz;pz(px<0+max(rp))]; pt = [pt;pt(px<0+max(rp))];
+    px = [px;px(px>L-max(rp))-L]; pz = [pz;pz(px>L-max(rp))]; pt = [pt;pt(px>L-max(rp))];
+
+    pz = [pz;pz(pz<0+max(rp))+D]; px = [px;px(pz<0+max(rp))]; pt = [pt;pt(pz<0+max(rp))];
+    pz = [pz;pz(pz>D-max(rp))-D]; px = [px;px(pz>D-max(rp))]; pt = [pt;pt(pz>L-max(rp))];
+
+    % Plot particles for visualization
+    figure;
+    cols = ['k','r','b','g'];
+    hold on;
+    for t = 1:Np
+        idx = find(pt == t);
+        viscircles([px(idx) pz(idx)], rp(t) * ones(length(idx), 1),'Color',cols(t));
+    end
+    axis ij equal tight; box on;
+    xlim([0 L]);
+    ylim([0 D]);
+    title('Randomized Particle Distribution');
+    hold off;
+
+end

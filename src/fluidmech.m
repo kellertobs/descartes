@@ -1,5 +1,3 @@
-tic;
-
 % assemble coefficients for matrix velocity diagonal and right-hand side
 
 IIL = [];       % equation indeces into L
@@ -19,7 +17,7 @@ else
 end
 aa  = zeros(size(ii));
 IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)];   AAL = [AAL; aa(:)+1];
-IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)+sds];
+IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)-1];
 IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
 
 % right boundary
@@ -30,34 +28,34 @@ else
 end
 aa  = zeros(size(ii));
 IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)];   AAL = [AAL; aa(:)+1];
-IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)+sds];
+IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)-1];
 IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
 
 % top boundary
 ii  = MapW(1,:); jj = ii;
 aa  = zeros(size(ii));
 IIL = [IIL; ii(:)]; JJL = [JJL; jj(:)];   AAL = [AAL; aa(:)+1];
-aa  = zeros(size(ii)) + WBG(1,:);
+aa  = zeros(size(ii));
 IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
 
 % bottom boundary
 ii  = MapW(end,:); jj = ii;
 aa  = zeros(size(ii));
 IIL = [IIL; ii(:)]; JJL = [JJL; jj(:)];   AAL = [AAL; aa(:)+1];
-aa  = zeros(size(ii)) + WBG(end,:);
+aa  = zeros(size(ii));
 IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
 
 
 % internal points
 ii    = MapW(2:end-1,2:end-1);
 EtaC1 =  etaco(2:end-1,1:end-1);   EtaC2 =  etaco(2:end-1,2:end);
-EtaP1 =  eta  (1:end-1,:      );   EtaP2 =  eta  (2:end,:      );
+EtaP1 =  etacc(1:end-1,:      );   EtaP2 =  etacc(2:end,:      );
 
 % coefficients multiplying z-velocities W
 %             top          ||         bottom          ||           left            ||          right
 jj1 = MapW(1:end-2,2:end-1); jj2 = MapW(3:end,2:end-1); jj3 = MapW(2:end-1,1:end-2); jj4 = MapW(2:end-1,3:end);
 
-aa  = a1.*rhofz(2:end-1,:)./dt;
+aa  = a1.*rhofz./dt;
 IIL = [IIL; ii(:)]; JJL = [JJL;  ii(:)];   AAL = [AAL; aa(:)           ];      % inertial term
 
 aa  = 2/3*(EtaP1+EtaP2)/h^2 + 1/2*(EtaC1+EtaC2)/h^2;
@@ -68,10 +66,8 @@ IIL = [IIL; ii(:)]; JJL = [JJL; jj3(:)];   AAL = [AAL;-1/2*EtaC1(:)/h^2];      %
 IIL = [IIL; ii(:)]; JJL = [JJL; jj4(:)];   AAL = [AAL;-1/2*EtaC2(:)/h^2];      % W one to the right
 
 % what shall we do with the drunken sailor...
-if ~bnchm
-    aa  = ddz(rho,h).*g0.*dt;
-    IIL = [IIL; ii(:)]; JJL = [JJL;  ii(:)];   AAL = [AAL; aa(:)];
-end
+% aa  = ddz(rho,h).*grav.*dt;
+% IIL = [IIL; ii(:)]; JJL = [JJL;  ii(:)];   AAL = [AAL; aa(:)];
 
 % coefficients multiplying x-velocities U
 %         top left         ||        bottom left          ||       top right       ||       bottom right
@@ -84,11 +80,10 @@ IIL = [IIL; ii(:)]; JJL = [JJL; jj4(:)];   AAL = [AAL;-(1/2*EtaC2(:)-1/3*EtaP2(:
 
 
 % z-RHS vector
-advn_mz = advect(rhofz(2:end-1,:).*W(2:end-1,2:end-1),(U(2:end-2,:)+U(3:end-1,:))/2,(W(1:end-1,2:end-1)+W(2:end,2:end-1))/2,h,{ADVN,''},[1,2],BCA);
-rr  = + (rhofz(2:end-1,:) - mean(rhofz(2:end-1,:),2)) .* g0 ...
-      + (a2.*rhoWo(2:end-1,:)+a3.*rhoWoo(2:end-1,:))/dt ...
+advn_mz = advect(rhofz.*W(2:end-1,2:end-1),(U(2:end-2,:)+U(3:end-1,:))/2,(W(1:end-1,2:end-1)+W(2:end,2:end-1))/2,h,{ADVN,''},[1,2],BCA);
+rr  = + (rhofz - mean(rhofz,2)) .* grav ...
+      + (a2.*rhoWo+a3.*rhoWoo)/dt ...
       - advn_mz;
-if bnchm; rr = rr + src_W_mms(2:end-1,2:end-1); end
 
 IIR = [IIR; ii(:)];  AAR = [AAR; rr(:)];
 
@@ -99,14 +94,14 @@ IIR = [IIR; ii(:)];  AAR = [AAR; rr(:)];
 ii  = MapU(1,:); jj1 = ii; jj2 = MapU(2,:);
 aa  = zeros(size(ii));
 IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)];   AAL = [AAL; aa(:)+1];
-IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)+top];
+IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)-1];
 IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
 
 % bottom boundary
 ii  = MapU(end,:); jj1 = ii; jj2 = MapU(end-1,:);
 aa  = zeros(size(ii));
 IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)];   AAL = [AAL; aa(:)+1];
-IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)+bot];
+IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)-1];
 IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
 
 if ~periodic
@@ -128,12 +123,12 @@ end
 % internal points
 if periodic
     ii    = MapU(2:end-1,:);
-    EtaC1 = etaco(1:end-1,:    );  EtaC2 = etaco(2:end,:    );
-    EtaP1 = eta  (:,icx(1:end-1));  EtaP2 = eta  (:,icx(2:end));
+    EtaC1 = etaco(1:end-1,:     );  EtaC2 = etaco(2:end,:     );
+    EtaP1 = etacc(:,icx(1:end-1));  EtaP2 = etacc(:,icx(2:end));
 else
     ii    = MapU(2:end-1,2:end-1);
     EtaC1 = etaco(1:end-1,2:end-1);  EtaC2 = etaco(2:end,2:end-1);
-    EtaP1 = eta  (:      ,1:end-1);  EtaP2 = eta  (:      ,2:end);
+    EtaP1 = etacc(:      ,1:end-1);  EtaP2 = etacc(:      ,2:end);
 end
 
 % coefficients multiplying x-velocities U
@@ -146,7 +141,7 @@ end
 if periodic
     aa  = (a1+gamma).*rhofx./dt;
 else
-    aa  = a1.*rhofx(:,2:end-1)./dt;
+    aa  = a1.*rhofx./dt;
 end
 IIL = [IIL; ii(:)]; JJL = [JJL;  ii(:)];   AAL = [AAL; aa(:)           ];      % inertial term
 
@@ -158,14 +153,12 @@ IIL = [IIL; ii(:)]; JJL = [JJL; jj3(:)];   AAL = [AAL;-1/2*EtaC1(:)/h^2];      %
 IIL = [IIL; ii(:)]; JJL = [JJL; jj4(:)];   AAL = [AAL;-1/2*EtaC2(:)/h^2];      % U one below
 
 % what shall we do with the drunken sailor...
-if ~bnchm
-    if periodic
-        aa  = ddx(rho(:,icx),h).*g0.*dt;
-    else
-        aa  = ddx(rho,h).*g0.*dt;
-    end
-    IIL = [IIL; ii(:)]; JJL = [JJL;  ii(:)];   AAL = [AAL; aa(:)];
-end
+% if periodic
+%     aa  = ddx(rho(:,icx),h).*grav.*dt;
+% else
+%     aa  = ddx(rho,h).*grav.*dt;
+% end
+% IIL = [IIL; ii(:)]; JJL = [JJL;  ii(:)];   AAL = [AAL; aa(:)];
 
 % coefficients multiplying z-velocities W
 %         top left         ||        top right          ||       bottom left       ||       bottom right
@@ -187,16 +180,9 @@ if periodic
     rr  = + (a2.*rhoUo+a3.*rhoUoo)/dt ...
           - advn_mx;
 else
-    advn_mx = advect(rhofx(:,2:end-1).*U(2:end-1,2:end-1),(U(2:end-1,1:end-1)+U(2:end-1,2:end))/2,(W(:,2:end-2)+W(:,3:end-1))/2,h,{ADVN,''},[1,2],BCA);
-    rr  = + (a2.*rhoUo(:,2:end-1)+a3.*rhoUoo(:,2:end-1))/dt ...
+    advn_mx = advect(rhofx.*U(2:end-1,2:end-1),(U(2:end-1,1:end-1)+U(2:end-1,2:end))/2,(W(:,2:end-2)+W(:,3:end-1))/2,h,{ADVN,''},[1,2],BCA);
+    rr  = + (a2.*rhoUo+a3.*rhoUoo)/dt ...
           - advn_mx;
-end
-if bnchm
-    if periodic
-        rr = rr + src_U_mms(2:end-1,:); 
-    else
-        rr = rr + src_U_mms(2:end-1,2:end-1); 
-    end
 end
 
 IIR = [IIR; ii(:)];  AAR = [AAR; rr(:)];
@@ -310,10 +296,10 @@ if ~exist('KP','var') || bnchm || lambda1+lambda2>0
     jj4 = MapP(2:end-1,3:end-0);
 
     % coefficients multiplying matrix pressure P
-    aa  = zeros(size(ii)) + lambda1*eps*h^2./eta;
+    aa  = zeros(size(ii)) + lambda1*eps*h^2./etacc;
     IIL = [IIL; ii(:)]; JJL = [JJL; ii(:)];    AAL = [AAL; aa(:)];  % P on stencil centre
     
-    kP  = lambda2*h^2./eta;
+    kP  = lambda2*h^2./etacc;
     kP1 = (kP(icz(1:end-2),:).*kP(icz(2:end-1),:)).^0.5;   kP2 = (kP(icz(2:end-1),:).*kP(icz(3:end-0),:)).^0.5;
     kP3 = (kP(:,icx(1:end-2)).*kP(:,icx(2:end-1))).^0.5;   kP4 = (kP(:,icx(2:end-1)).*kP(:,icx(3:end-0))).^0.5;
 
@@ -334,8 +320,7 @@ AAR = [];       % forcing entries for R
 
 ii  = MapP(2:end-1,2:end-1);
 
-rr  = VolSrc;
-if bnchm; rr = rr + src_P_mms(2:end-1,2:end-1); end
+rr  = zeros(size(ii));
 
 IIR = [IIR; ii(:)]; AAR = [AAR; rr(:)];
 
@@ -346,24 +331,11 @@ RP  = sparse(IIR,ones(size(IIR)),AAR,NP,1);
 nzp = round((Nz+2)/2);
 nxp = round((Nx+2)/2);
 np0 = MapP(nzp,nxp);
-% DD(MapP(nzp,nxp),:) = 0;
+DD(MapP(nzp,nxp),:) = 0;
 KP(MapP(nzp,nxp),:) = 0;
 KP(MapP(nzp,nxp),MapP(nzp,nxp)) = 1;
-KP(MapP(end,nxp),MapP(nzp,nxp)) = 1;
-% RP(MapP(nzp,nxp),:) = 0;
+RP(MapP(nzp,nxp),:) = 0;
 
-if bnchm; RP(MapP(nzp,nxp),:) = P_mms(nzp,nxp); end
-
-if bnchm
-    % set U = 0 in fixed point
-    nzu = 1;
-    nxu = round((Nx+2)/2);
-    KV(MapU(nzu,nxu),:) = 0;
-    GG(MapU(nzu,nxu),:) = 0;
-    KV(MapU(nzu,nxu),MapU(nzu  ,nxu)) = 1;
-    KV(MapU(nzu,nxu),MapU(nzu+1,nxu)) = 1;
-    RV(MapU(nzp,nxp),:) = 0;
-end
 
 % assemble and scale global coefficient matrix and right-hand side vector
 
@@ -385,12 +357,9 @@ RR  = SCL*RR;
 % Solve linear system of equations for vx, vz, P
 
 SOL = SCL*(LL\RR);  % update solution
+% SOL = (LL\RR);  % update solution
 
 % map solution vector to 2D arrays
 W = full(reshape(SOL(MapW(:))        ,Nz+1,Nx+2));  % matrix z-velocity
 U = full(reshape(SOL(MapU(:))        ,Nz+2,Nx+1));  % matrix x-velocity
 P = full(reshape(SOL(MapP(:)+(NW+NU)),Nz+2,Nx+2));  % matrix dynamic pressure
-
-end
-
-FMtime = FMtime + toc;
