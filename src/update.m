@@ -1,38 +1,42 @@
 %%*****  UPDATE PARAMETERS & AUXILIARY FIELDS  ****************************
 
-Uf = interp2(XXu,ZZu,U,XXuf,ZZuf,'linear',0);
-Wf = interp2(XXw,ZZw,W,XXwf,ZZwf,'linear',0);
+if step>0
 
-% advance particle fields
-dCdt = - advect(C,Uf(2:end-1,:),Wf(:,2:end-1),h,{ADVN,''},[1,2],BCA);
+% advect particle fields
+dCdt = - advect(C,U(2:end-1,:),W(:,2:end-1),h,{ADVN,''},[1,2],BCA);
 
-% residual of major component evolution
+% residual of particle field update
 res_C = (a1*C-a2*Co-a3*Coo)/dt - (b1*dCdt + b2*dCdto + b3*dCdtoo);
 
+% % update particle fields
+% C = (a2*Co + a3*Coo + (b1*dCdt + b2*dCdto + b3*dCdtoo)*dt)/a1;
+
 % semi-implicit update of major component density
-upd_C = max(-C, - alpha*res_C*dt/a1 + beta*upd_C );
+upd_C = - alpha*res_C*dt/a1 + beta*upd_C;
 C     = C + upd_C;
 
+end
+
 % update coefficient fields
-eta = etam.*ones(Nzf,Nxf);
+eta = etam.*ones(Nz,Nx);
 for it=1:Np
-    eta = eta .* etap.^C(:,:,it);
+    eta = eta .* etap.^(C(:,:,it)>=0);
 end
 
-rho = rhom.*ones(Nzf,Nxf);
+rho = rhom.*ones(Nz,Nx);
 for it=1:Np
-    rho = rho + (rhop(it)-rhom).*C(:,:,it);
+    rho = rho + (rhop(it)-rhom).*(C(:,:,it)>=0);
 end
 
-rhofz = interp2(XXf,ZZf,rho,XXw(2:end-1,2:end-1),ZZw(2:end-1,2:end-1));
-rhofx = interp2(XXf,ZZf,rho,XXu(2:end-1,2:end-1),ZZu(2:end-1,2:end-1));
-rhocc =     interp2(XXf,ZZf,      rho ,XX  ,ZZ  );
-etacc = 10.^interp2(XXf,ZZf,log10(eta),XX  ,ZZ  );
-etaco = 10.^interp2(XXfg,ZZfg,log10(eta([end,1:end,1],[end,1:end,1])),XXco,ZZco,'linear');
+rhofz = (rho(icz(1:end-1),:) + rho(icz(2:end),:))/2;
+rhofx = (rho(:,icx(1:end-1)) + rho(:,icx(2:end)))/2;
+etacc = eta;
+etaco = (eta(icz(1:end-1),icx(1:end-1)) .* eta(icz(1:end-1),icx(2:end-0)) ...
+      .* eta(icz(2:end-0),icx(1:end-1)) .* eta(icz(2:end-0),icx(2:end-0))).^0.25;
 
 % update time step
-dta = h/2   /max(abs([U(:);W(:)]));
-dt  = min([1.01*dto,CFL*dta]);                                       % time step size
+dta = h/2/max(abs([U(:);W(:)]));
+dt  = min([1.1*dto,CFL*dta]);                                       % time step size
 
 % update velocity divergence
 Div_V = ddz(W(:,2:end-1),h) + ddx(U(2:end-1,:),h);                         % get velocity divergence

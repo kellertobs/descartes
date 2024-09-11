@@ -16,109 +16,84 @@ fprintf('*************************************************************\n');
 fprintf('\n   run ID: %s \n\n',runID);
 
 load ocean;                  % load custom colormap
-if periodic % periodic sides
-    BCA     =  {'periodic','periodic'};  % boundary condition on advection (top/bot, sides)
-    BCD     =  {'periodic','periodic'};  % boundary condition on advection (top/bot, sides)
-else % closed sides
-    BCA     =  {'closed','closed'};  % boundary condition on advection (top/bot, sides)
-    BCD     =  {'closed','closed'};  % boundary condition on advection (top/bot, sides) 
-end
+BCA     =  {'periodic','periodic'};  % boundary condition on advection (top/bot, sides)
+BCD     =  {'periodic','periodic'};  % boundary condition on advection (top/bot, sides)
 
 % get coordinate arrays
 Xc        = -h/2:h:L+h/2;
 Zc        = -h/2:h:D+h/2;
 Xf        = (Xc(1:end-1)+Xc(2:end))./2;
 Zf        = (Zc(1:end-1)+Zc(2:end))./2;
-[XXu,ZZu] = meshgrid(Xf,Zc);
-[XXw,ZZw] = meshgrid(Xc,Zf);
+[XXu,ZZu]   = meshgrid(Xf,Zc);
+[XXw,ZZw]   = meshgrid(Xc,Zf);
 [XXco,ZZco] = meshgrid(Xf,Zf);
 Xc        = Xc(2:end-1);
 Zc        = Zc(2:end-1);
 [XX,ZZ]   = meshgrid(Xc,Zc);
 
-hf        = h/4;
-Xcf       = hf/2:hf:L-hf/2;
-Zcf       = hf/2:hf:D-hf/2;
-[XXf,ZZf] = meshgrid(Xcf,Zcf);
-Xcfg      = -hf/2:hf:L+hf/2;
-Zcfg      = -hf/2:hf:D+hf/2;
-[XXfg,ZZfg] = meshgrid(Xcfg,Zcfg);
-Xff        = (Xcfg(1:end-1)+Xcfg(2:end))./2;
-Zff        = (Zcfg(1:end-1)+Zcfg(2:end))./2;
-[XXuf,ZZuf] = meshgrid(Xff,Zcfg);
-[XXwf,ZZwf] = meshgrid(Xcfg,Zff);
+Nx = length(Xc);
+Nz = length(Zc);
 
-Nx = length(Xc);  Nxf = length(Xcf);
-Nz = length(Zc);  Nzf = length(Zcf);
-
-% get smoothed initialisation field
 rng(seed);
-% smth = smth*Nx*Nz*1e-4;
-% rp   = randn(Nz,Nx);
-% for i = 1:round(smth)
-%     rp = rp + diffus(rp,1/8*ones(size(rp)),1,[1,2],BCD);
-%     rp = rp - mean(mean(rp));
-% end
-% rp = rp./max(abs(rp(:)));
 
 % get mapping arrays
 NP = (Nz+2) * (Nx+2);
 NW = (Nz+1) * (Nx+2);
 NU = (Nz+2) * (Nx+1);
-NC =  Nzf   *  Nxf  ;
+NC =  Nz    *  Nx   ;
 MapP = reshape(1:NP,Nz+2,Nx+2);
 MapW = reshape(1:NW,Nz+1,Nx+2);
 MapU = reshape(1:NU,Nz+2,Nx+1) + NW;
 
 % set ghosted index arrays
-if periodic  % periodic side boundaries
-    icx = [Nx,1:Nx,1];
-    icz = [1,1:Nz,Nz];
-    ifx = [Nx,1:Nx+1,2];
-    ifz = [2,1:Nz+1,Nz];
-else         % closed side boundaries
-    icx = [1,1:Nx,Nx];
-    icz = [1,1:Nz,Nz];
-    ifx = [2,1:Nx+1,Nx];
-    ifz = [2,1:Nz+1,Nz];
-end
+icx = [Nx,1:Nx,1];
+icz = [Nz,1:Nz,1];
+ifx = [Nx,1:Nx+1,2];
+ifz = [Nz,1:Nz+1,2];
 
 % initialise fluid mechanics solution fields
 U   =  zeros(Nz+2,Nx+1);  UBG = U; Ui = U; upd_U = 0*U;
 W   =  zeros(Nz+1,Nx+2);  WBG = W; Wi = W; wf = 0.*W; wx = 0.*W; wm = 0.*W; upd_W = 0*W;
-P   =  zeros(Nz+2,Nx+2);  Vel = 0.*P; upd_P = 0*P;
+P   =  zeros(Nz+2,Nx+2);  Vel = 0.*P;  upd_P = 0*P;
 SOL = [W(:);U(:);P(:)];
 
 % initialise particle fields
 [xp, zp, tp] = generate_particles(Np, rp, fp, D, L, ptol);
 
-C = zeros(Nzf,Nxf,Np);
+C = zeros(Nz,Nx,Np);
 for ip = 1:length(xp)
-    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XXf-xp(ip)).^2 + (ZZf-zp(ip)).^2) < rp(tp(ip))));
+    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)).^2 + (ZZ-zp(ip)).^2) < rp(tp(ip))));
+    % C(:,:,tp(ip)) = C(:,:,tp(ip)) + sqrt((XX-xp(ip)).^2 + (ZZ-zp(ip)).^2) - rp(tp(ip));
 end
+
+for i=1:2*min(rp/h)
+    C = C + (diff(C(icz,:,:),2,1) + diff(C(:,icx,:),2,2))/8;
+    C = C./max(max(max(C,[],1)),max(max(C,[],2)));
+end
+C = 2*C-1;
+
+C0 = C;
 
 % initialise auxiliary parameters 
 Co = C;  Coo = Co;
-dCdt   = 0.*C;  dCdto  = dCdt;  dCdtoo = dCdto;
-upd_C  = 0.*C;
+dCdt  = 0.*C;  dCdto = dCdt;  dCdtoo = dCdto;
+upd_C = 0.*C;
 dto = dt;
 a1 = 1; a2 = 1; a3 = 0;
 b1 = 1; b2 = 0; b3 = 0;
-
-% initialise coefficient fields
-update;
-
-rhoW = rhofz.*W(2:end-1,2:end-1); rhoWo = rhoW; rhoWoo = rhoWo;
-rhoU = rhofx.*U(2:end-1,2:end-1); rhoUo = rhoU; rhoUoo = rhoUo;
-
-% initialise timing and iterative parameters
 frst    = 1;
 step    = 0;
 time    = 0;
 iter    = 0;
-hist    = [];
 dsumMdt = 0; dsumMdto = 0;
 dsumCdt = 0; dsumCdto = 0;
+HST     = [];
+
+% initialise coefficient fields
+update;
+
+rhoW = rhofz.*W(:,2:end-1); rhoWo = rhoW; rhoWoo = rhoWo;
+rhoU = rhofx.*U(2:end-1,:); rhoUo = rhoU; rhoUoo = rhoUo;
 
 % overwrite fields from file if restarting run
 if restart
@@ -161,7 +136,6 @@ else
     update;
     % history;
     output;
-    step = step+1;
 end
 
 restart = 0;
@@ -197,16 +171,23 @@ function [px, pz, pt] = generate_particles(Np, rp, fp, D, L, tol)
             placed = false;
             while ~placed
                 % Randomly place particle inside the domain
-                x = rand() * L;
-                y = rand() * D;
+                if i==1
+                    x = L/2;
+                    z = D/2;
+                else
+                    x = rand() * (L-tol*rp(t));
+                    z = rand() * (D-tol*rp(t));
+                end
                 
                 % Check if the new particle overlaps with any existing particles
-                min_dist = tol * (rp(t)+rp(pt));  % Minimum distance between particles (scaled by tolerance)
                 overlaps = false;
                 
                 for j = 1:length(px)
-                    dist = sqrt((x - px(j))^2 + (y - pz(j))^2);
-                    if dist < min_dist
+                    min_dist = tol * (rp(t)+rp(pt(j)));  % Minimum distance between particles (scaled by tolerance)
+                    x0 = px(j);
+                    z0 = pz(j);
+                    dist = sqrt((x - x0.').^2 + (z - z0.').^2);
+                    if any(dist(:) < min_dist)
                         overlaps = true;
                         break;
                     end
@@ -214,9 +195,9 @@ function [px, pz, pt] = generate_particles(Np, rp, fp, D, L, tol)
                 
                 if ~overlaps
                     % If no overlap, store the particle
-                    px = [px; x];
-                    pz = [pz; y];
-                    pt = [pt; t];
+                    px = [px; x(1)];
+                    pz = [pz; z(1)];
+                    pt = [pt; t   ];
                     placed = true;
                 end
             end

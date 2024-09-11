@@ -41,8 +41,6 @@ elseif max(Vel(:)) >= 1000/hr
 end
 Xsc  = Xc./SpaceScale;
 Zsc  = Zc./SpaceScale;
-Xfsc = Xcf./SpaceScale;
-Zfsc = Zcf./SpaceScale;
 
 % set axis and border dimensions
 axh = 6.00*sqrt(D/L); axw = 6.00*sqrt(L/D)+1.50;
@@ -78,10 +76,32 @@ set(fh1,'CurrentAxes',ax(13));
 imagesc(Xsc,Zsc, P(2:end-1,2:end-1)); axis ij equal tight; box on; cb = colorbar;
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$P$ [Pa]'],TX{:},FS{:}); ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
 set(fh1,'CurrentAxes',ax(14));
-imagesc(Xfsc,Zfsc,rho); axis ij equal tight; box on; cb = colorbar;
-set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$\nabla \cdot \mathbf{v}$ [1/',TimeUnits,']'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:}); set(gca,'YTickLabel',[]);
+imagesc(Xsc,Zsc,rho); axis ij equal tight; box on; cb = colorbar;
+set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$\rho$ [kg/m$^3$]'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:}); set(gca,'YTickLabel',[]);
 
+% initialize figures and axes
+if ~exist('fh2','var'); fh2 = figure(VIS{:});
+else; set(0, 'CurrentFigure', fh2); clf;
+end
+colormap(ocean);
+fh = axb + 1*axh + 0*avs + axt;
+fw = axl + 1*axw + 0*ahs + axr;
+set(fh2,UN{:},'Position',[1 1 fw fh]);
+set(fh2,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
+set(fh2,'Color','w','InvertHardcopy','off','Resize','off');
+ax(21) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs axw axh]);
 drawnow
+
+if step>0
+% plot velocity-pressure solution in Fig. 1
+set(0,'CurrentFigure',fh2)
+set(fh2,'CurrentAxes',ax(21));
+plot(HST.time./TimeScale,HST.DWp./SpeedScale,'r-','LineWidth',1.5); axis tight; box on; hold on
+plot(HST.time./TimeScale,HST.DWp0./SpeedScale,'k--','LineWidth',1.5);
+set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); 
+xlabel(['Time [',TimeUnits,']'],TX{:},FS{:});
+ylabel(['Speed [',SpeedUnits,']'],TX{:},FS{:});
+end
 
 % % save output to file
 % if save_op && ~restart
