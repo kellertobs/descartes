@@ -34,15 +34,19 @@ while time <= tend && step <= Nt
     for it = 1:Np
         HST.Wp(step,it) = mean(Wc(C(:,:,it)>=0));
     end
-    HST.Wp(step,Np+1) = mean(Wc(any(C<0,3)));
+    HST.Wp(step,Np+1) = mean(Wc(all(C<0,3)));
 
     for it = 1:Np
         HST.stdWp(step,it) = std(Wc(C(:,:,it)>=0));
     end
-    HST.Wp(step,Np+1) = std(Wc(any(C<0,3)));
+    HST.Wp(step,Np+1) = std(Wc(all(C<0,3)));
 
-    HST.DWp(step,:) = HST.Wp(step,1:Np) - HST.Wp(step,Np+1);
-    HST.DWp0(step,:) = -(rhop-mean(rho(:))).*grav.*rp.^2./geomean(eta(:));
+    HST.DWp_NM(step,:) = HST.Wp(step,1:Np) - HST.Wp(step,Np+1);
+    HST.DWp_EM(step,:) = -(rhop-mean(rho(:))).*grav.*rp.^2./geomean(eta(:));
+    HST.DWp_ST(step,:) = -(rhop-rhom).*grav.*rp.^2./etam;
+    HST.DWp_HS(step,:) = -(rhop-rhom).*grav.*rp.^2./etam.*(1-fp).^5;
+
+    HST.Fh(step,:) = HST.DWp_NM(step,:)./HST.DWp_ST(step,:);
 
     % print model diagnostics
     % diagnose;

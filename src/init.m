@@ -54,7 +54,7 @@ ifz = [Nz,1:Nz+1,2];
 % initialise fluid mechanics solution fields
 U   =  zeros(Nz+2,Nx+1);  UBG = U; Ui = U; upd_U = 0*U;
 W   =  zeros(Nz+1,Nx+2);  WBG = W; Wi = W; wf = 0.*W; wx = 0.*W; wm = 0.*W; upd_W = 0*W;
-P   =  zeros(Nz+2,Nx+2);  Vel = 0.*P;  upd_P = 0*P;
+P   =  zeros(Nz+2,Nx+2);  Vel = 0.*P(2:end-1,2:end-1);  upd_P = 0*P;
 SOL = [W(:);U(:);P(:)];
 
 % initialise particle fields
@@ -92,8 +92,7 @@ HST     = [];
 % initialise coefficient fields
 update;
 
-rhoW = rhofz.*W(:,2:end-1); rhoWo = rhoW; rhoWoo = rhoWo;
-rhoU = rhofx.*U(2:end-1,:); rhoUo = rhoU; rhoUoo = rhoUo;
+store;
 
 % overwrite fields from file if restarting run
 if restart
@@ -104,9 +103,9 @@ if restart
     end
     if exist(name,'file')
         fprintf('\n   restart from %s \n\n',name);
-        load(name,'U','W','P','Pt','C','dCdt','rho','eta','eII','tII','dt','time','step');
-        name = [outdir,'/',runID,'/',runID,'_hist'];
-        load(name,'hist');
+        load(name,'U','W','P','C','rho','eta','HST','dCdt','eII','tII','dt','time','step');
+        name = [outdir,'/',runID,'/',runID,'_HST'];
+        load(name,'HST');
 
         SOL = [W(:);U(:);P(:)];
 
@@ -171,22 +170,31 @@ function [px, pz, pt] = generate_particles(Np, rp, fp, D, L, tol)
             placed = false;
             while ~placed
                 % Randomly place particle inside the domain
-                if i==1
+                if num_particles==1
                     x = L/2;
                     z = D/2;
                 else
-                    x = rand() * (L-tol*rp(t));
-                    z = rand() * (D-tol*rp(t));
+                    x = rand() * L;
+                    z = rand() * D;
                 end
                 
                 % Check if the new particle overlaps with any existing particles
                 overlaps = false;
                 
                 for j = 1:length(px)
-                    min_dist = tol * (rp(t)+rp(pt(j)));  % Minimum distance between particles (scaled by tolerance)
-                    x0 = px(j);
-                    z0 = pz(j);
-                    dist = sqrt((x - x0.').^2 + (z - z0.').^2);
+                    min_dist = tol * (rp(t) + rp(pt(j)));  % Minimum distance between particles (scaled by tolerance)
+                    
+                    % Calculate distance with periodic boundaries in both x and z directions
+                    dx = abs(x - px(j));
+                    dz = abs(z - pz(j));
+                    
+                    % Apply periodic boundary conditions
+                    dx = min(dx, L - dx);
+                    dz = min(dz, D - dz);
+                    
+                    % Calculate the Euclidean distance considering periodicity
+                    dist = sqrt(dx^2 + dz^2);
+
                     if any(dist(:) < min_dist)
                         overlaps = true;
                         break;
@@ -203,7 +211,7 @@ function [px, pz, pt] = generate_particles(Np, rp, fp, D, L, tol)
             end
         end
     end
-    
+
     px = [px;px(px<0+max(rp))+L]; pz = [pz;pz(px<0+max(rp))]; pt = [pt;pt(px<0+max(rp))];
     px = [px;px(px>L-max(rp))-L]; pz = [pz;pz(px>L-max(rp))]; pt = [pt;pt(px>L-max(rp))];
 

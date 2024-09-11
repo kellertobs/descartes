@@ -9,13 +9,13 @@ runID    =  'demo';              % run identifier
 outdir   = '../out/';
 srcdir   = '../src/';
 restart  =  0;                   % restart from file (0: new run; <1: restart from last; >1: restart from specified frame)
-nop      =  1;                 % output frame plotted/saved every 'nop' time steps
+nop      =  10;                 % output frame plotted/saved every 'nop' time steps
 plot_op  =  1;                   % switch on to live plot results
-save_op  =  0;                   % switch on to save output to file
+save_op  =  1;                   % switch on to save output to file
 
 % set model domain parameters
 D        =  1;                   % chamber depth [m]
-N        =  300;                 % number of grid points in z-direction
+N        =  200;                 % number of grid points in z-direction
 h        =  D/N;                 % grid spacing (equal in both dimensions, do not set) [m]
 L        =  D;                   % chamber width (equal to h for 1-D mode) [m]
 
@@ -28,13 +28,13 @@ yr       =  hr*24*365.25;
 
 % set physical model parameters
 seed     =  24;
-ptol     =  7;
-Np       =  1;                   % number of particle types
-rp       =  [6*h];         % particle radius [m]
-fp       =  [0.0012];           % target particle fraction [vol]
-rhop     =  [3300];         % particle density [kg/m3]
+ptol     =  1.6;
+Np       =  2;                   % number of particle types
+rp       =  [5*h,5*h];         % particle radius [m]
+fp       =  [0.1,0.1];           % target particle fraction [vol]
+rhop     =  [3300,2500];         % particle density [kg/m3]
 rhom     =  2800;                % melt density [kg/m3]
-etap     =  1e3;                 % particle viscosity contrast rel. to melt [Pas]
+etap     =  1e6;                 % particle viscosity contrast rel. to melt [Pas]
 etam     =  1e0;                 % melt viscosity
 grav     =  10;                  % gravity [m/s2]
 
@@ -45,8 +45,6 @@ CFL      =  0.50;                % (physical) time stepping courant number (mult
 rtol     =  1e-3;                % relative nonlinear residual tolerance
 atol     =  1e-6;                % absolute nonlinear residual tolerance
 maxit    =  6;                  % maximum outer its
-% lambda1  =  0e-6;
-% lambda2  =  0e-6;
 alpha    =  0.95;
 beta     =  0.0;
 

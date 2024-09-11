@@ -30,6 +30,10 @@ end
 
 rhofz = (rho(icz(1:end-1),:) + rho(icz(2:end),:))/2;
 rhofx = (rho(:,icx(1:end-1)) + rho(:,icx(2:end)))/2;
+
+rhoW = rhofz.*W(:,2:end-1); 
+rhoU = rhofx.*U(2:end-1,:); 
+
 etacc = eta;
 etaco = (eta(icz(1:end-1),icx(1:end-1)) .* eta(icz(1:end-1),icx(2:end-0)) ...
       .* eta(icz(2:end-0),icx(1:end-1)) .* eta(icz(2:end-0),icx(2:end-0))).^0.25;
@@ -58,3 +62,6 @@ txz = etaco .* exz;                                                        % xz-
 tII = (0.5.*(txx.^2 + tzz.^2 ...
        + 2.*(txz(1:end-1,1:end-1).^2+txz(2:end,1:end-1).^2 ...
        +     txz(1:end-1,2:end  ).^2+txz(2:end,2:end  ).^2)/4)).^0.5 + eps;
+
+% update Reynolds number
+Re = Vel.*rho.*D./eta;

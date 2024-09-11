@@ -42,10 +42,12 @@ end
 Xsc  = Xc./SpaceScale;
 Zsc  = Zc./SpaceScale;
 
+cmap = [colororder;[0 0 0]];
+
 % set axis and border dimensions
-axh = 6.00*sqrt(D/L); axw = 6.00*sqrt(L/D)+1.50;
-ahs = 0.60; avs = 0.80;
-axb = 1.20; axt = 1.50;
+axh = 8.00*sqrt(D/L); axw = 8.00*sqrt(L/D)+1.50;
+ahs = 0.80; avs = 0.80;
+axb = 1.25; axt = 1.50;
 axl = 1.50; axr = 0.50;
 
 % initialize figures and axes
@@ -84,84 +86,48 @@ if ~exist('fh2','var'); fh2 = figure(VIS{:});
 else; set(0, 'CurrentFigure', fh2); clf;
 end
 colormap(ocean);
-fh = axb + 1*axh + 0*avs + axt;
-fw = axl + 1*axw + 0*ahs + axr;
+fh = axb + 1.5*axh + 0*avs + axt;
+fw = axl + 2.0*axw + 0*ahs + axr;
 set(fh2,UN{:},'Position',[1 1 fw fh]);
 set(fh2,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
 set(fh2,'Color','w','InvertHardcopy','off','Resize','off');
-ax(21) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs axw axh]);
-drawnow
+ax(21) = axes(UN{:},'position',[axl+0*2*axw+0*ahs axb+0*1.5*axh+0*avs 2*axw 1.5*axh]);
 
 if step>0
 % plot velocity-pressure solution in Fig. 1
 set(0,'CurrentFigure',fh2)
 set(fh2,'CurrentAxes',ax(21));
-plot(HST.time./TimeScale,HST.DWp./SpeedScale,'r-','LineWidth',1.5); axis tight; box on; hold on
-plot(HST.time./TimeScale,HST.DWp0./SpeedScale,'k--','LineWidth',1.5);
+for it = 1:Np
+plot(HST.time./TimeScale,HST.DWp_NM(:,it)./SpeedScale,'-' ,'Color',cmap(it,:),'LineWidth',1.5); axis tight; box on; hold on
+plot(HST.time./TimeScale,HST.DWp_EM(:,it)./SpeedScale,'--','Color',cmap(it,:),'LineWidth',1.5);
+% plot(HST.time./TimeScale,HST.DWp_ST(:,it)./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
+end
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); 
 xlabel(['Time [',TimeUnits,']'],TX{:},FS{:});
 ylabel(['Speed [',SpeedUnits,']'],TX{:},FS{:});
 end
 
-% % save output to file
-% if save_op && ~restart
-%     if Nx <= 10 && Nz <= 10  % print 0D plots
-%         name = [outdir,'/',runID,'/',runID,'_tch_',num2str(floor(step/nop))];
-%         print(fh1,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_aux_',num2str(floor(step/nop))];
-%         print(fh2,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_cmp',num2str(floor(step/nop))];
-%         print(fh3,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_TAS',num2str(floor(step/nop))];
-%         print(fh11,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_AFM',num2str(floor(step/nop))];
-%         print(fh12,name,'-dpng','-r300','-image');
-%     elseif Nx <= 10  % create 1D plots
-%         name = [outdir,'/',runID,'/',runID,'_sol_',num2str(floor(step/nop))];
-%         print(fh1,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_aux_',num2str(floor(step/nop))];
-%         print(fh2,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_cmp_',num2str(floor(step/nop))];
-%         print(fh3,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_TAS',num2str(floor(step/nop))];
-%         print(fh11,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_AFM',num2str(floor(step/nop))];
-%         print(fh12,name,'-dpng','-r300','-image');
-%     else
-%         name = [outdir,'/',runID,'/',runID,'_vep_',num2str(floor(step/nop))];
-%         print(fh1,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_tch_',num2str(floor(step/nop))];
-%         print(fh2,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_phs_',num2str(floor(step/nop))];
-%         print(fh3,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_sgr_',num2str(floor(step/nop))];
-%         print(fh4,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_cmp',num2str(floor(step/nop))];
-%         print(fh5,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_oxd',num2str(floor(step/nop))];
-%         print(fh6,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_mnr',num2str(floor(step/nop))];
-%         print(fh7,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_gch',num2str(floor(step/nop))];
-%         print(fh8,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_TAS',num2str(floor(step/nop))];
-%         print(fh11,name,'-dpng','-r300','-image');
-%         name = [outdir,'/',runID,'/',runID,'_AFM',num2str(floor(step/nop))];
-%         print(fh12,name,'-dpng','-r300','-image');
-%     end
-% 
-%     name = [outdir,'/',runID,'/',runID,'_',num2str(floor(step/nop))];
-%     save(name,'U','W','P','Pt','Pchmb','f','x','m','fq','xq','mq','phi','chi','mu','X','F','M','S','C','T','Tp','c','cm','cx','cf','TRC','trc','dSdt','dCdt','dFdt','dXdt','dMdt','drhodt','dTRCdt','Gf','Gx','Gm','rho','eta','eII','tII','dt','time','step','VolSrc','wf','wx','wm','cal');
-%     name = [outdir,'/',runID,'/',runID,'_cont'];
-%     save(name,'U','W','P','Pt','Pchmb','f','x','m','fq','xq','mq','phi','chi','mu','X','F','M','S','C','T','Tp','c','cm','cx','cf','TRC','trc','dSdt','dCdt','dFdt','dXdt','dMdt','drhodt','dTRCdt','Gf','Gx','Gm','rho','eta','eII','tII','dt','time','step','VolSrc','wf','wx','wm','cal');
-%     name = [outdir,'/',runID,'/',runID,'_hist'];
-%     save(name,'hist');
-% 
-% end
-% 
-% if save_op && (step==0 || restart)
-%     logfile = [outdir,'/',runID,'/',runID,'.log'];
-%     if exist(logfile,'file') && step==0; delete(logfile); end
-%     diary(logfile)
-% end
+drawnow
+
+% save output to file
+if save_op && ~restart
+    name = [outdir,'/',runID,'/',runID,'_sol_',num2str(floor(step/nop))];
+    print(fh1,name,'-dpng','-r300','-image');
+    name = [outdir,'/',runID,'/',runID,'_hst_',num2str(floor(step/nop))];
+    print(fh2,name,'-dpng','-r300','-image');
+    
+    name = [outdir,'/',runID,'/',runID,'_',num2str(floor(step/nop))];
+    save(name,'U','W','P','C','rho','eta','dCdt','eII','tII','dt','time','step');
+    name = [outdir,'/',runID,'/',runID,'_cont'];
+    save(name,'U','W','P','C','rho','eta','dCdt','eII','tII','dt','time','step');
+    name = [outdir,'/',runID,'/',runID,'_HST'];
+    save(name,'HST');
+
+end
+
+if save_op && (step==0 || restart)
+    logfile = [outdir,'/',runID,'/',runID,'.log'];
+    if exist(logfile,'file') && step==0; delete(logfile); end
+    diary(logfile)
+end
     
