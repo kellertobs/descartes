@@ -294,5 +294,6 @@ U = full(reshape(SOL(MapU(:))        ,Nz+2,Nx+1));  % matrix x-velocity
 P = full(reshape(SOL(MapP(:)+(NW+NU)),Nz+2,Nx+2));  % matrix dynamic pressure
 P = P - mean(P(:));
 
-Vel = sqrt(((W(1:end-1,2:end-1)+W(2:end,2:end-1))/2).^2 ...
-         + ((U(2:end-1,1:end-1)+U(2:end-1,2:end))/2).^2);
+Wc  = (W(1:end-1,2:end-1)+W(2:end,2:end-1))/2;
+Uc  = (U(2:end-1,1:end-1)+U(2:end-1,2:end))/2;
+Vel = sqrt(Wc.^2 + Uc.^2);

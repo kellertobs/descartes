@@ -58,12 +58,20 @@ P   =  zeros(Nz+2,Nx+2);  Vel = 0.*P(2:end-1,2:end-1);  upd_P = 0*P;
 SOL = [W(:);U(:);P(:)];
 
 % initialise particle fields
-[xp, zp, tp] = generate_particles(Np, rp, fp, D, L, ptol);
+[xp, zp, tp, Np] = generate_particles(Nt, rp, fp, D, L, ptol);
 
-C = zeros(Nz,Nx,Np);
-for ip = 1:length(xp)
+xpo = xp;
+zpo = zp;
+Wp = zeros(Np,1);  Wpo = Wp;  Wm = Wp;
+Up = zeros(Np,1);  Upo = Up;  Um = Up;
+
+C = zeros(Nz,Nx,Nt);
+for ip = 1:Np
     C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)).^2 + (ZZ-zp(ip)).^2) < rp(tp(ip))));
-    % C(:,:,tp(ip)) = C(:,:,tp(ip)) + sqrt((XX-xp(ip)).^2 + (ZZ-zp(ip)).^2) - rp(tp(ip));
+    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)+0).^2) < rp(tp(ip))));
+    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)+0).^2) < rp(tp(ip))));
+    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)+0).^2 + (ZZ-zp(ip)-D).^2) < rp(tp(ip))));
+    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)+0).^2 + (ZZ-zp(ip)+D).^2) < rp(tp(ip))));
 end
 
 for i=1:2*min(rp/h)
@@ -78,6 +86,8 @@ C0 = C;
 Co = C;  Coo = Co;
 dCdt  = 0.*C;  dCdto = dCdt;  dCdtoo = dCdto;
 upd_C = 0.*C;
+upd_xp = xp;
+upd_zp = zp;
 dto = dt;
 a1 = 1; a2 = 1; a3 = 0;
 b1 = 1; b2 = 0; b3 = 0;
@@ -91,6 +101,9 @@ HST     = [];
 
 % initialise coefficient fields
 update;
+
+rhoWo = rhoW;
+rhoUo = rhoU;
 
 store;
 
@@ -139,9 +152,9 @@ end
 
 restart = 0;
 
-function [px, pz, pt] = generate_particles(Np, rp, fp, D, L, tol)
+function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
     % Inputs:
-    % Np  - number of particle types (e.g. 2 for two particle types)
+    % Nt  - number of particle types (e.g. 2 for two particle types)
     % rp  - vector of particle radii [rp1, rp2, ...]
     % fp  - vector of area fractions [fp1, fp2, ...] for each particle type
     % D   - width of the rectangular domain
@@ -159,18 +172,18 @@ function [px, pz, pt] = generate_particles(Np, rp, fp, D, L, tol)
     px = [];
     pz = [];
     pt = [];
-    
-    for t = 1:Np
+
+    for t = 1:Nt
         % Area to be occupied by particle type t
         target_area = fp(t) * domain_area;
         % Calculate number of particles of type t based on area fraction
-        num_particles = round(target_area / (pi * rp(t)^2));
+        np = round(target_area / (pi * rp(t)^2));
         
-        for i = 1:num_particles
+        for i = 1:np
             placed = false;
             while ~placed
                 % Randomly place particle inside the domain
-                if num_particles==1
+                if np==1
                     x = L/2;
                     z = D/2;
                 else
@@ -212,24 +225,30 @@ function [px, pz, pt] = generate_particles(Np, rp, fp, D, L, tol)
         end
     end
 
-    px = [px;px(px<0+max(rp))+L]; pz = [pz;pz(px<0+max(rp))]; pt = [pt;pt(px<0+max(rp))];
-    px = [px;px(px>L-max(rp))-L]; pz = [pz;pz(px>L-max(rp))]; pt = [pt;pt(px>L-max(rp))];
+    % px = [px;px(px<0+max(rp))+L]; pz = [pz;pz(px<0+max(rp))]; pt = [pt;pt(px<0+max(rp))];
+    % px = [px;px(px>L-max(rp))-L]; pz = [pz;pz(px>L-max(rp))]; pt = [pt;pt(px>L-max(rp))];
+    % 
+    % pz = [pz;pz(pz<0+max(rp))+D]; px = [px;px(pz<0+max(rp))]; pt = [pt;pt(pz<0+max(rp))];
+    % pz = [pz;pz(pz>D-max(rp))-D]; px = [px;px(pz>D-max(rp))]; pt = [pt;pt(pz>L-max(rp))];
 
-    pz = [pz;pz(pz<0+max(rp))+D]; px = [px;px(pz<0+max(rp))]; pt = [pt;pt(pz<0+max(rp))];
-    pz = [pz;pz(pz>D-max(rp))-D]; px = [px;px(pz>D-max(rp))]; pt = [pt;pt(pz>L-max(rp))];
+    Np = length(px);
 
-    % Plot particles for visualization
-    figure;
-    cols = ['k','r','b','g'];
-    hold on;
-    for t = 1:Np
-        idx = find(pt == t);
-        viscircles([px(idx) pz(idx)], rp(t) * ones(length(idx), 1),'Color',cols(t));
-    end
-    axis ij equal tight; box on;
-    xlim([0 L]);
-    ylim([0 D]);
-    title('Randomized Particle Distribution');
-    hold off;
+    % % Plot particles for visualization
+    % figure;
+    % cols = ['k','r','b','g'];
+    % hold on;
+    % for t = 1:Nt
+    %     idx = find(pt == t);
+    %     viscircles([px(idx)   pz(idx)], rp(t) ,'Color',cols(t));
+    %     viscircles([px(idx)-L pz(idx)], rp(t) ,'Color',cols(t));
+    %     viscircles([px(idx)+L pz(idx)], rp(t) ,'Color',cols(t));
+    %     viscircles([px(idx) pz(idx)-D], rp(t) ,'Color',cols(t));
+    %     viscircles([px(idx) pz(idx)+D], rp(t) ,'Color',cols(t));
+    % end
+    % axis ij equal tight; box on;
+    % xlim([0 L]);
+    % ylim([0 D]);
+    % title('Randomized Particle Distribution');
+    % hold off;
 
 end
