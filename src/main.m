@@ -1,49 +1,61 @@
-% initialise model run
+% Main routine for numerical modelling code Descartes created to simulate
+% particle settling/flotation in a small periodic domain
+
+% Initialize the model (this sets up initial conditions, parameters, etc.)
 init;
 
-% physical time stepping loop
+% Physical time stepping loop
 step = 1;
 while time <= tend && step <= Nstep
-    
-    % time step info
+
+    % Display timing information for the current step
     timing;
-
-    % store previous solution
-    store;
-
-    % nonlinear iteration loop
-    resnorm = 1; resnorm0 = 1;
-    iter    = 1;
-    while resnorm > atol && resnorm/resnorm0 > rtol && iter<=maxit
-
-        % solve fluid-mechanics equations
-        fluidmech;
-
-        % update non-linear parameters and auxiliary variables
-        update;
-
-        % report convergence
-        report;
-
-        iter = iter+1;
-    end
-
-    % write history
-    history;
-
-    % print model diagnostics
-    % diagnose;
-
-    % plot model results
-    if ~mod(step,nop); output; end
     
-    % increment time/step
-    time = time+dt;
-    step = step+1;
-    if frst; frst = 0; end
+    % Store previous solution
+    store;
+    
+    % Initialize nonlinear iteration loop variables
+    resnorm = 1;         % Residual norm (for convergence check)
+    resnorm0 = 1;        % Initial residual norm (for relative convergence)
+    iter = 1;            % Nonlinear iteration counter
+    
+    % Nonlinear iteration loop (solve until convergence or max iterations)
+    while resnorm > atol && resnorm/resnorm0 > rtol && iter <= maxit
+        
+        % Solve fluid-mechanics equations (fluidmech should be vectorized internally)
+        fluidmech;
+        
+        % Update nonlinear parameters and auxiliary variables
+        update;
+        
+        % Report convergence progress
+        report;
+        
+        % Increment the nonlinear iteration counter
+        iter = iter + 1;
+
+    end
+    
+    % Record history of the current step
+    history;
+    
+    % Optionally output model results at a fixed interval (every 'nop' steps)
+    if ~mod(step, nop)
+        output;
+    end
+    
+    % Increment time and step
+    time = time + dt;   % Advance time by the current time step
+    step = step + 1;    % Increment step counter
+    
+    % Reset first-step after first step
+    if frst
+        frst = 0;
+    end
 end
 
-% save final state of model
+% Save the final state of the model after the last step
 output;
 
-diary off
+% Close logging/diary file if it was enabled
+diary off;

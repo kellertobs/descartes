@@ -1,10 +1,7 @@
+% Display step, time step, and current time in appropriate units
 fprintf(1,'\n*****  step %d;  dt = %4.4e;  time = %4.4e [%s]\n\n',step,dt./TimeScale,time./TimeScale,TimeUnits);
-TTtime  = tic;
-EQtime  = 0;
-FMtime  = 0;
-TCtime  = 0;
-UDtime  = 0;
 
+% Set coefficients based on time integration scheme (TINT) and current step
 if     strcmp(TINT,'be1im') || step==1 || frst % first step / 1st-order backward-Euler implicit scheme
     a1 = 1; a2 = 1; a3 = 0;
     b1 = 1; b2 = 0; b3 = 0;

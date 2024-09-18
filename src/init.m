@@ -1,156 +1,166 @@
-% create output directory
-if ~isfolder([outdir,'/',runID])
-    mkdir([outdir,'/',runID]);
+% Model initialization script for Descartes numerical modelling code
+% This script sets up the computational grid, initializes variables,
+% and handles file IO for saving and restarting.
+
+% Create output directory if it doesn't exist
+output_dir = fullfile(outdir, runID);
+if ~isfolder(output_dir)
+    mkdir(output_dir);
 end
 
-% save input parameters and runtime options (unless restarting)
+% Save input parameters and runtime options (unless restarting)
 if restart == 0 && save_op == 1
-    parfile = [outdir,'/',runID,'/',runID,'_par'];
+    parfile = fullfile(output_dir, [runID '_par']);
     save(parfile);
 end
 
-fprintf('\n\n')
+% Print initialization message with current timestamp and runID
+fprintf('\n\n');
 fprintf('*************************************************************\n');
-fprintf('*****  RUN DESCARTES MODEL | %s  *************\n',datetime('now'));
+fprintf('*****  RUN DESCARTES MODEL | %s  *************\n', datetime('now'));
 fprintf('*************************************************************\n');
-fprintf('\n   run ID: %s \n\n',runID);
+fprintf('\n   run ID: %s \n\n', runID);
 
-load ocean;                  % load custom colormap
-BCA     =  {'periodic','periodic'};  % boundary condition on advection (top/bot, sides)
-BCD     =  {'periodic','periodic'};  % boundary condition on advection (top/bot, sides)
+% Load custom colormap for visualization
+load ocean;
 
-% get coordinate arrays
-Xc        = -h/2:h:L+h/2;
-Zc        = -h/2:h:D+h/2;
-Xf        = (Xc(1:end-1)+Xc(2:end))./2;
-Zf        = (Zc(1:end-1)+Zc(2:end))./2;
-[XXu,ZZu]   = meshgrid(Xf,Zc);
-[XXw,ZZw]   = meshgrid(Xc,Zf);
-[XXco,ZZco] = meshgrid(Xf,Zf);
-Xc        = Xc(2:end-1);
-Zc        = Zc(2:end-1);
-[XX,ZZ]   = meshgrid(Xc,Zc);
+% Set boundary conditions for advection (periodic by default)
+BCA = {'periodic', 'periodic'};  % Boundary condition on advection (top/bot, sides)
+BCD = {'periodic', 'periodic'};  % Boundary condition for diffusion (top/bot, sides)
 
-Nx = length(Xc);
-Nz = length(Zc);
+% Generate coordinate arrays for both cell-centered and face-centered grids
+h  = D/N;        % grid spacing (equal in both dimensions) [m]
+Xc = -h/2 : h : L + h/2;  % Cell-centered in X
+Zc = -h/2 : h : D + h/2;  % Cell-centered in Z
+Xf = (Xc(1:end-1) + Xc(2:end)) / 2;  % Face-centered in X
+Zf = (Zc(1:end-1) + Zc(2:end)) / 2;  % Face-centered in Z
 
+% Remove ghost points from grid for internal calculations
+Xc = Xc(2:end-1);
+Zc = Zc(2:end-1);
+[XX, ZZ] = meshgrid(Xc, Zc);
+
+% Grid sizes
+Nx = length(Xc); % grid size in x-direction
+Nz = length(Zc); % grid size in z-direction
+
+% Set time unit conversion factors
+hr       =  3600;                % seconds per hour
+yr       =  hr*24*365.25;        % seconds per year
+
+% Set random seed for reproducibility
 rng(seed);
 
-% get mapping arrays
-NP = (Nz+2) * (Nx+2);
-NW = (Nz+1) * (Nx+2);
-NU = (Nz+2) * (Nx+1);
-NC =  Nz    *  Nx   ;
-MapP = reshape(1:NP,Nz+2,Nx+2);
-MapW = reshape(1:NW,Nz+1,Nx+2);
-MapU = reshape(1:NU,Nz+2,Nx+1) + NW;
+% Generate mapping arrays for various fields
+NP = (Nz + 2) * (Nx + 2);  % Pressure field size (with ghost cells)
+NW = (Nz + 1) * (Nx + 2);  % W-velocity field size
+NU = (Nz + 2) * (Nx + 1);  % U-velocity field size
+NC = Nz * Nx;              % Cell-centered field size
+MapP = reshape(1:NP, Nz+2, Nx+2);  % Mapping for Pressure
+MapW = reshape(1:NW, Nz+1, Nx+2);  % Mapping for W-velocity
+MapU = reshape(1:NU, Nz+2, Nx+1) + NW;  % Mapping for U-velocity
 
-% set ghosted index arrays
-icx = [Nx,1:Nx,1];
-icz = [Nz,1:Nz,1];
-ifx = [Nx,1:Nx+1,2];
-ifz = [Nz,1:Nz+1,2];
+% Set ghosted index arrays for periodic boundary conditions
+icx = [Nx, 1:Nx, 1];  % Index for periodic X boundary
+icz = [Nz, 1:Nz, 1];  % Index for periodic Z boundary
+ifx = [Nx, 1:Nx+1, 2];  % Index for face-centered X boundary
+ifz = [Nz, 1:Nz+1, 2];  % Index for face-centered Z boundary
 
-% initialise fluid mechanics solution fields
-U   =  zeros(Nz+2,Nx+1);  UBG = U; Ui = U; upd_U = 0*U;
-W   =  zeros(Nz+1,Nx+2);  WBG = W; Wi = W; wf = 0.*W; wx = 0.*W; wm = 0.*W; upd_W = 0*W;
-P   =  zeros(Nz+2,Nx+2);  Vel = 0.*P(2:end-1,2:end-1);  upd_P = 0*P;
-SOL = [W(:);U(:);P(:)];
+% Initialize fluid mechanics solution fields (U, W, P)
+U = zeros(Nz+2, Nx+1); upd_U = zeros(size(U));
+W = zeros(Nz+1, Nx+2); upd_W = zeros(size(W));
+P = zeros(Nz+2, Nx+2); Vel = zeros(Nz, Nx); upd_P = zeros(size(P));
+SOL = [W(:); U(:); P(:)];
 
-% initialise particle fields
-[xp, zp, tp, Np] = generate_particles(Nt, rp, fp, D, L, ptol);
+% Initialize particle fields
+[xp, zp, tp, Np] = generate_particles(Nt, rp, fp, D, L, pord);
 
-xpo = xp;
-zpo = zp;
-Wp = zeros(Np,1);  Wpo = Wp;  Wm = Wp;
-Up = zeros(Np,1);  Upo = Up;  Um = Up;
+% Initialize particle velocity arrays
+Wp = zeros(Np, 1); Wpo = Wp; Wm = Wp;
+Up = zeros(Np, 1); Upo = Up; Um = Up;
 
-C = zeros(Nz,Nx,Nt);
-for ip = 1:Np
-    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)).^2 + (ZZ-zp(ip)).^2) < rp(tp(ip))));
-    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)+0).^2) < rp(tp(ip))));
-    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)+0).^2) < rp(tp(ip))));
-    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)+0).^2 + (ZZ-zp(ip)-D).^2) < rp(tp(ip))));
-    C(:,:,tp(ip)) = min(1,C(:,:,tp(ip)) + double(sqrt((XX-xp(ip)+0).^2 + (ZZ-zp(ip)+D).^2) < rp(tp(ip))));
-end
-
-for i=1:2*min(rp/h)
-    C = C + (diff(C(icz,:,:),2,1) + diff(C(:,icx,:),2,2))/8;
-    C = C./max(max(max(C,[],1)),max(max(C,[],2)));
-end
-C = 2*C-1;
-
-C0 = C;
-
-% initialise auxiliary parameters 
-Co = C;  Coo = Co;
-dCdt  = 0.*C;  dCdto = dCdt;  dCdtoo = dCdto;
-upd_C = 0.*C;
-upd_xp = xp;
-upd_zp = zp;
+% Initialize auxiliary parameters
+xpo = xp; zpo = zp;
+upd_xp = xp; upd_zp = zp;
 dto = dt;
 a1 = 1; a2 = 1; a3 = 0;
 b1 = 1; b2 = 0; b3 = 0;
-frst    = 1;
-step    = 0;
-time    = 0;
-iter    = 0;
+frst = 1;
+step = 0;
+time = 0;
+iter = 0;
 dsumMdt = 0; dsumMdto = 0;
 dsumCdt = 0; dsumCdto = 0;
-HST     = [];
+HST = [];
 
-% initialise coefficient fields
+% Initialize coefficient fields
 update;
+C     = Cq;
+dCdt  = zeros(size(C)); dCdto = dCdt; dCdtoo = dCdto;
+upd_C = zeros(size(C));
 
+% Store the initial fields
+Co = C; Coo = Co;
 rhoWo = rhoW;
 rhoUo = rhoU;
-
 store;
 
-% overwrite fields from file if restarting run
+% Store initial concentration and particle fields
+C0 = C;
+xp0 = xp;
+zp0 = zp;
+indp0 = indp;
+
+% Overwrite fields from file if restarting the run
 if restart
-    if     restart < 0  % restart from last continuation frame
-        name = [outdir,'/',runID,'/',runID,'_cont.mat'];
-    elseif restart > 0  % restart from specified continuation frame
-        name = [outdir,'/',runID,'/',runID,'_',num2str(restart),'.mat'];
+    handle_restart();
+else
+    % Complete, plot, and save the initial condition
+    fluidmech;
+    update;
+    output;
+end
+
+restart = 0;
+
+
+%% Helper Functions
+
+function handle_restart()
+    % Handle restart logic based on the restart flag
+    if restart < 0  % Restart from the last continuation frame
+        name = fullfile(outdir, runID, [runID '_cont.mat']);
+    elseif restart > 0  % Restart from a specified continuation frame
+        name = fullfile(outdir, runID, [runID '_' num2str(restart) '.mat']);
     end
-    if exist(name,'file')
-        fprintf('\n   restart from %s \n\n',name);
-        load(name,'U','W','P','C','rho','eta','HST','dCdt','eII','tII','dt','time','step');
-        name = [outdir,'/',runID,'/',runID,'_HST'];
-        load(name,'HST');
+    
+    if exist(name, 'file')
+        fprintf('\n   Restarting from %s \n\n', name);
+        load(name, 'U', 'W', 'P', 'C', 'rho', 'eta', 'HST', 'dCdt', 'eII', 'tII', 'dt', 'time', 'step');
+        name = fullfile(outdir, runID, [runID '_HST']);
+        load(name, 'HST');
 
-        SOL = [W(:);U(:);P(:)];
+        SOL = [W(:); U(:); P(:)];
 
-        update; 
-        
-        Co    = C;
+        update;
+        Co = C;
         dCdto = dCdt;
-        dto   = dt;
+        dto = dt;
 
         fluidmech;
         update;
         output;
 
-        time    = time+dt;
-        step    = step+1;
-
-    else % continuation file does not exist, start from scratch
-        fprintf('\n   !!! restart file does not exist !!! \n   => starting run from scratch %s \n\n',runID);
+        time = time + dt;
+        step = step + 1;
+    else
+        fprintf('\n   !!! Restart file does not exist !!!\n   Starting run from scratch: %s \n\n', runID);
         fluidmech;
         update;
         history;
         output;
     end
-else
-    % complete, plot, and save initial condition
-    fluidmech;
-    update;
-    % history;
-    output;
 end
-
-restart = 0;
 
 function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
     % Inputs:
@@ -196,7 +206,7 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
                 
                 for j = 1:length(px)
                     min_dist = tol * (rp(t) + rp(pt(j)));  % Minimum distance between particles (scaled by tolerance)
-                    
+
                     % Calculate distance with periodic boundaries in both x and z directions
                     dx = abs(x - px(j));
                     dz = abs(z - pz(j));
@@ -210,6 +220,7 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
 
                     if any(dist(:) < min_dist)
                         overlaps = true;
+                        tol      = (1-1e-6)*tol;
                         break;
                     end
                 end
@@ -225,30 +236,6 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
         end
     end
 
-    % px = [px;px(px<0+max(rp))+L]; pz = [pz;pz(px<0+max(rp))]; pt = [pt;pt(px<0+max(rp))];
-    % px = [px;px(px>L-max(rp))-L]; pz = [pz;pz(px>L-max(rp))]; pt = [pt;pt(px>L-max(rp))];
-    % 
-    % pz = [pz;pz(pz<0+max(rp))+D]; px = [px;px(pz<0+max(rp))]; pt = [pt;pt(pz<0+max(rp))];
-    % pz = [pz;pz(pz>D-max(rp))-D]; px = [px;px(pz>D-max(rp))]; pt = [pt;pt(pz>L-max(rp))];
-
     Np = length(px);
-
-    % % Plot particles for visualization
-    % figure;
-    % cols = ['k','r','b','g'];
-    % hold on;
-    % for t = 1:Nt
-    %     idx = find(pt == t);
-    %     viscircles([px(idx)   pz(idx)], rp(t) ,'Color',cols(t));
-    %     viscircles([px(idx)-L pz(idx)], rp(t) ,'Color',cols(t));
-    %     viscircles([px(idx)+L pz(idx)], rp(t) ,'Color',cols(t));
-    %     viscircles([px(idx) pz(idx)-D], rp(t) ,'Color',cols(t));
-    %     viscircles([px(idx) pz(idx)+D], rp(t) ,'Color',cols(t));
-    % end
-    % axis ij equal tight; box on;
-    % xlim([0 L]);
-    % ylim([0 D]);
-    % title('Randomized Particle Distribution');
-    % hold off;
 
 end

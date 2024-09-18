@@ -1,12 +1,17 @@
-% get residual of thermochemical equations
-resnorm    = norm(upd_C(:))/(norm(C(:))+eps);
+% get residual of phase field update
+resnorm = norm(upd_zp(:)) / (norm(zp(:)) + eps);
 
-if iter==1 || resnorm>resnorm0; resnorm0 = resnorm + 1e-32; end  % reset reference residual
+% Reset reference residual if necessary
+if iter == 1 || resnorm > resnorm0
+    resnorm0 = resnorm + eps;
+end
 
-% check for solver divergence or failing
-if isnan(resnorm); error('!!! Solver failed with NaN: end run !!!'); end
+% Check for solver failure (NaN in residuals)
+if isnan(resnorm)
+    error('!!! Solver failed with NaN: end run !!!');
+end
 
-% report iterations
+% Report iterations
 if     iter >=  0  && iter <  10
     fprintf(1,'    ---  iter =    %d;   abs res = %4.4e;   rel res = %4.4e \n',iter,resnorm,resnorm/resnorm0);
 elseif iter >= 10  && iter < 100
@@ -14,10 +19,3 @@ elseif iter >= 10  && iter < 100
 elseif iter >= 100 && iter < 1000
     fprintf(1,'    ---  iter =  %d;   abs res = %4.4e;   rel res = %4.4e \n',iter,resnorm,resnorm/resnorm0);
 end 
-
-% % plot convergence of outer iterations
-% if plot_cv
-%     figure(100); if iter==1; clf; else; hold on; end
-%     plot(iter,log10(resnorm),'k.','MarkerSize',15,'LineWidth',1.5); box on; axis tight;
-%     drawnow;
-% end
