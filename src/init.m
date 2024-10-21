@@ -52,13 +52,13 @@ yr       =  hr*24*365.25;        % seconds per year
 rng(seed);
 
 % Generate mapping arrays for various fields
-NP = (Nz + 2) * (Nx + 2);  % Pressure field size (with ghost cells)
-NW = (Nz + 1) * (Nx + 2);  % W-velocity field size
-NU = (Nz + 2) * (Nx + 1);  % U-velocity field size
+NP = (Nz + 0) * (Nx + 0);  % Pressure field size (with ghost cells)
+NW = (Nz + 1) * (Nx + 0);  % W-velocity field size
+NU = (Nz + 0) * (Nx + 1);  % U-velocity field size
 NC = Nz * Nx;              % Cell-centered field size
-MapP = reshape(1:NP, Nz+2, Nx+2);  % Mapping for Pressure
-MapW = reshape(1:NW, Nz+1, Nx+2);  % Mapping for W-velocity
-MapU = reshape(1:NU, Nz+2, Nx+1) + NW;  % Mapping for U-velocity
+MapP = reshape(1:NP, Nz, Nx);  % Mapping for Pressure
+MapW = reshape(1:NW, Nz+1, Nx);  % Mapping for W-velocity
+MapU = reshape(1:NU, Nz, Nx+1) + NW;  % Mapping for U-velocity
 
 % Set ghosted index arrays for periodic boundary conditions
 icx = [Nx, 1:Nx, 1];  % Index for periodic X boundary
@@ -66,10 +66,23 @@ icz = [Nz, 1:Nz, 1];  % Index for periodic Z boundary
 ifx = [Nx, 1:Nx+1, 2];  % Index for face-centered X boundary
 ifz = [Nz, 1:Nz+1, 2];  % Index for face-centered Z boundary
 
+MapSten = zeros(Nz*Nx,9);
+k = 0;
+for i=2:Nz+1
+    for j=2:Nx+1
+        k=k+1;
+        MapSten(k,:) = [MapP(icz(i  ),icx(j  )), ...
+                        MapP(icz(i-1),icx(j  )), MapP(icz(i  ),icx(j-1)), ...
+                        MapP(icz(i+1),icx(j  )), MapP(icz(i  ),icx(j+1)), ...
+                        MapP(icz(i-1),icx(j-1)), MapP(icz(i-1),icx(j+1)), ...
+                        MapP(icz(i+1),icx(j-1)), MapP(icz(i+1),icx(j+1))];
+    end
+end
+
 % Initialize fluid mechanics solution fields (U, W, P)
-U = zeros(Nz+2, Nx+1); upd_U = zeros(size(U));
-W = zeros(Nz+1, Nx+2); upd_W = zeros(size(W));
-P = zeros(Nz+2, Nx+2); Vel = zeros(Nz, Nx); upd_P = zeros(size(P));
+U = zeros(Nz, Nx+1); upd_U = zeros(size(U));
+W = zeros(Nz+1, Nx); upd_W = zeros(size(W));
+P = zeros(Nz, Nx); Vel = zeros(Nz, Nx); upd_P = zeros(size(P));  res_P = 0*P;
 SOL = [W(:); U(:); P(:)];
 
 % Initialize particle fields
@@ -94,6 +107,7 @@ dsumCdt = 0; dsumCdto = 0;
 HST = [];
 
 % Initialize coefficient fields
+eta = 0*P + etam;
 update;
 C     = Cq;
 dCdt  = zeros(size(C)); dCdto = dCdt; dCdtoo = dCdto;

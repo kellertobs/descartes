@@ -7,7 +7,7 @@ if step > 0
     % ---------------------------------------------------------------------
 
     % Advect particle fields
-    advn = -advect(C, U(2:end-1, :), W(:, 2:end-1), h, {ADVN, ''}, [1, 2], BCA);
+    advn = -advect(C, U(:, :), W(:, :), h, {ADVN, ''}, [1, 2], BCA);
    
     src  = (max(0,max(0,Cq)-max(0,C)) + min(0,min(0,Cq)-min(0,C)))/2/dt;
 
@@ -87,8 +87,8 @@ rhofz = (rho(icz(1:end-1), :) + rho(icz(2:end), :)) / 2;
 rhofx = (rho(:, icx(1:end-1)) + rho(:, icx(2:end))) / 2;
 
 % Compute rho*W and rho*U for inertial terms
-rhoW = rhofz .* W(:, 2:end-1);
-rhoU = rhofx .* U(2:end-1, :);
+rhoW = rhofz .* W;
+rhoU = rhofx .* U;
 
 % Update eta at cell centers and edges
 etacc = eta;
@@ -102,18 +102,21 @@ etaco = (eta(icz(1:end-1), icx(1:end-1)) .* eta(icz(1:end-1), icx(2:end)) ...
 % Compute time step size based on CFL condition
 dta = h / (2 * max(abs([U(:); W(:)])));
 dt = min([1.1 * dto, CFL * dta]);
-
+% 
+% dtauW = (h/2)^2 ./ max( eta(icz(1:end-1),:), eta(icz(2:end),:));
+% dtauU = (h/2)^2 ./ max( eta(:,icx(1:end-1)), eta(:,icx(2:end)));
+% dtauP = eta;
 
 % -------------------------------------------------------------------------
 % UPDATE STRAIN RATES AND STRESSES
 % -------------------------------------------------------------------------
 
 % Strain rates
-ups = ddz(W(:, 2:end-1), h) + ddx(U(2:end-1, :), h);  % Velocity divergence
+ups = ddz(W(:, :), h) + ddx(U(:, :), h);  % Velocity divergence
 
-exx = diff(U(2:end-1, :), 1, 2) / h - ups / 3;  % x-normal strain rate
-ezz = diff(W(:, 2:end-1), 1, 1) / h - ups / 3;  % z-normal strain rate
-exz = 0.5 * (diff(U, 1, 1) / h + diff(W, 1, 2) / h);  % Shear strain rate
+exx = ddx(U(:, :),h) - ups / 3;  % x-normal strain rate
+ezz = ddz(W(:, :),h) - ups / 3;  % z-normal strain rate
+exz = 0.5 * (ddz(U(icz,:),h) + ddx(W(:,icx),h));  % Shear strain rate
 
 % Effective strain rate
 eII = sqrt(0.5 * (exx.^2 + ezz.^2 + 2 * mean([exz(1:end-1, 1:end-1).^2, ...
