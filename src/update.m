@@ -9,7 +9,7 @@ if step > 0
     % Advect particle fields
     advn = -advect(C, U(:, :), W(:, :), h, {ADVN, ''}, [1, 2], BCA);
    
-    src  = (max(0,max(0,Cq)-max(0,C)) + min(0,min(0,Cq)-min(0,C)))/2/dt;
+    src  = max(0,Cq-C)/2/dt + min(0,Cq-C)/2000/dt;
 
     advn = advn + src;
 
@@ -18,7 +18,8 @@ if step > 0
 
     % Semi-implicit update of major component density
     upd_C = - alpha * res_C * dt / a1 + beta * upd_C;
-    C = C + upd_C;
+
+    C = max(0,min(1, C + upd_C ));
 
 
     % ---------------------------------------------------------------------

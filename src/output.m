@@ -147,14 +147,12 @@ set(0,'CurrentFigure',fh3)
 set(fh3,'CurrentAxes',ax(31));
 for it = 1:Nt
 plot(HST.time./TimeScale,-HST.DWp_NM(:,it)./SpeedScale,'-' ,'Color',cmap(it,:),'LineWidth',1.5); axis tight; box on; hold on
-plot(HST.time./TimeScale,-(HST.DWp_NM(:,it)+[2,-2].*HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
-plot(HST.time./TimeScale,-HST.DWp_EM(:,it)./SpeedScale,'--','Color',cmap(it,:),'LineWidth',1.5);
+plot(HST.time./TimeScale,-(HST.DWp_NM(:,it)+[1,-1].*HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
 end
 set(gca,TL{:},TS{:}); 
 title(['Segregation Speeds'],TX{:},FS{:}); 
 xlabel(['Time [',TimeUnits,']'],TX{:},FS{:});
 ylabel(['Speed [',SpeedUnits,']'],TX{:},FS{:});
-text(0.8,1.025,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
 
 % initialize figures and axes
 if ~exist('fh4','var'); fh4 = figure(VIS{:});
