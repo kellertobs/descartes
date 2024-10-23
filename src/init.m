@@ -17,7 +17,7 @@ end
 % Print initialization message with current timestamp and runID
 fprintf('\n\n');
 fprintf('*************************************************************\n');
-fprintf('*****  RUN DESCARTES MODEL | %s  *************\n', datetime('now'));
+fprintf('*****  RUN DESCARTES MODEL | %s  **********\n', datetime('now'));
 fprintf('*************************************************************\n');
 fprintf('\n   run ID: %s \n\n', runID);
 
@@ -200,6 +200,7 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
     for t = 1:Nt
         % Area to be occupied by particle type t
         target_area = fp(t) * domain_area;
+
         % Calculate number of particles of type t based on area fraction
         np = round(target_area / (pi * rp(t)^2));
         
@@ -219,7 +220,7 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
                 overlaps = false;
                 
                 for j = 1:length(px)
-                    min_dist = tol * (rp(t) + rp(pt(j)));  % Minimum distance between particles (scaled by tolerance)
+                    min_dist = tol * (rp(t) + rp(pt(j))/2);  % Minimum distance between particles (scaled by tolerance)
 
                     % Calculate distance with periodic boundaries in both x and z directions
                     dx = abs(x - px(j));
