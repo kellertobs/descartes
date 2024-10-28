@@ -158,7 +158,7 @@ maxspd = max([-(HST.DWp_mean(:)+HST.DWp_std(:));-(HST.DWp_mean(:)-HST.DWp_std(:)
 minspd = min([-(HST.DWp_mean(:)+HST.DWp_std(:));-(HST.DWp_mean(:)-HST.DWp_std(:));])./SpeedScale;
 line([time/2/TimeScale,time/2/TimeScale],[minspd,maxspd],'Color','k','LineStyle','--','LineWidth',1)
 set(gca,TL{:},TS{:}); 
-legend([ph(1:3),pph(1:Nt)],[{'mean'},{'std'},{'time avg.'},strp(1:Nt)],TX{:},FS{:});
+legend([ph(1:3),pph(1:Nt)],[{'mean'},{'std'},{'time avg.'},strp(1:Nt)],TX{:},FS{:},'Location','southwest');
 title(['Convection \& Segregation Speeds'],TX{:},FS{:}); 
 xlabel(['Time [',TimeUnits,']'],TX{:},FS{:});
 ylabel(['Speed [',SpeedUnits,']'],TX{:},FS{:});
