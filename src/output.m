@@ -147,12 +147,13 @@ ax(31) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs 2*axw 1.5*axh]);
 set(0,'CurrentFigure',fh3)
 set(fh3,'CurrentAxes',ax(31));
 for it = 1:Nt
-plot(HST.time./TimeScale,-HST.DWp_mean(:,it)./SpeedScale,'-' ,'Color',cmap(it,:),'LineWidth',2); axis tight; box on; hold on
-plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)+[1,-1].*HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
-plot(HST.time./TimeScale,-HST.DWp_tavg(:,it)./SpeedScale,'-.' ,'Color',cmap(it,:),'LineWidth',1.5);
-
+ph(it,1) = plot(HST.time./TimeScale,-HST.DWp_mean(:,it)./SpeedScale,'-' ,'Color',cmap(it,:),'LineWidth',2); axis tight; box on; hold on
+ph(it,2) = plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)+HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
+ph(it,2) = plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)-HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
+ph(it,3) = plot(HST.time./TimeScale,-HST.DWp_tavg(:,it)./SpeedScale,'-.' ,'Color',cmap(it,:),'LineWidth',1.5);
 end
 set(gca,TL{:},TS{:}); 
+legend([ph(1,1:3)],{'mean','std','time avg.'},TX{:},FS{:});
 title(['Segregation Speeds'],TX{:},FS{:}); 
 xlabel(['Time [',TimeUnits,']'],TX{:},FS{:});
 ylabel(['Speed [',SpeedUnits,']'],TX{:},FS{:});
