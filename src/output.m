@@ -52,7 +52,7 @@ cmap = [cmap;[0.95 0.90 0.85]];
 axh = 8.00*sqrt(D/L); axw = 8.00*sqrt(L/D)+1.50;
 ahs = 0.80; avs = 0.80;
 axb = 1.25; axt = 1.50;
-axl = 1.50; axr = 0.50;
+axl = 1.75; axr = 0.50;
 
 % initialize figures and axes
 if ~exist('fh1','var'); fh1 = figure(VIS{:});
@@ -109,18 +109,19 @@ coltl{it+1}    = 'mlt';
 imagesc(Xsc,Zsc,CRGB); axis ij equal tight; box on; cb = colorbar; colormap(ax(21),colmap);
 cols = ['k','r','b','g'];
 hold on;
+rv = D./sqrt(Np)/2;
 for it = 1:Nt
     idx = find(tp == it);
-    viscircles([xp(idx)   zp(idx)], rp(it)  ,'Color',cmap(it,:),'LineWidth',1.0);
-    viscircles([xp(idx)   zp(idx)], rp(it)*4,'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
-    viscircles([xp(idx)-L zp(idx)], rp(it)  ,'Color',cmap(it,:),'LineWidth',1.0);
-    viscircles([xp(idx)-L zp(idx)], rp(it)*4,'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
-    viscircles([xp(idx)+L zp(idx)], rp(it)  ,'Color',cmap(it,:),'LineWidth',1.0);
-    viscircles([xp(idx)+L zp(idx)], rp(it)*4,'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
-    viscircles([xp(idx) zp(idx)-D], rp(it)  ,'Color',cmap(it,:),'LineWidth',1.0);
-    viscircles([xp(idx) zp(idx)-D], rp(it)*4,'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
-    viscircles([xp(idx) zp(idx)+D], rp(it)  ,'Color',cmap(it,:),'LineWidth',1.0);
-    viscircles([xp(idx) zp(idx)+D], rp(it)*4,'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx)   zp(idx)], rp(it),'Color',cmap(it,:),'LineWidth',1.0);
+    viscircles([xp(idx)   zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx)-L zp(idx)], rp(it),'Color',cmap(it,:),'LineWidth',1.0);
+    viscircles([xp(idx)-L zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx)+L zp(idx)], rp(it),'Color',cmap(it,:),'LineWidth',1.0);
+    viscircles([xp(idx)+L zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx) zp(idx)-D], rp(it),'Color',cmap(it,:),'LineWidth',1.0);
+    viscircles([xp(idx) zp(idx)-D], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx) zp(idx)+D], rp(it),'Color',cmap(it,:),'LineWidth',1.0);
+    viscircles([xp(idx) zp(idx)+D], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
 end
 xlim([0 L]);
 ylim([0 D]);
@@ -146,8 +147,10 @@ ax(31) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs 2*axw 1.5*axh]);
 set(0,'CurrentFigure',fh3)
 set(fh3,'CurrentAxes',ax(31));
 for it = 1:Nt
-plot(HST.time./TimeScale,-HST.DWp_NM(:,it)./SpeedScale,'-' ,'Color',cmap(it,:),'LineWidth',1.5); axis tight; box on; hold on
-plot(HST.time./TimeScale,-(HST.DWp_NM(:,it)+[1,-1].*HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
+plot(HST.time./TimeScale,-HST.DWp_mean(:,it)./SpeedScale,'-' ,'Color',cmap(it,:),'LineWidth',2); axis tight; box on; hold on
+plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)+[1,-1].*HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
+plot(HST.time./TimeScale,-HST.DWp_tavg(:,it)./SpeedScale,'-.' ,'Color',cmap(it,:),'LineWidth',1.5);
+
 end
 set(gca,TL{:},TS{:}); 
 title(['Segregation Speeds'],TX{:},FS{:}); 

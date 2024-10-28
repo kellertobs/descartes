@@ -89,8 +89,8 @@ SOL = [W(:); U(:); P(:)];
 [xp, zp, tp, Np] = generate_particles(Nt, rp, fp, D, L, pord);
 
 % Initialize particle velocity arrays
-Wp = zeros(Np, 1); Wpo = Wp; Wm = Wp;
-Up = zeros(Np, 1); Upo = Up; Um = Up;
+Wp = zeros(sum(Np), 1); Wpo = Wp; Wm = Wp;
+Up = zeros(sum(Np), 1); Upo = Up; Um = Up;
 
 % Initialize auxiliary parameters
 xpo = xp; zpo = zp;
@@ -202,13 +202,13 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
         target_area = fp(t) * domain_area;
 
         % Calculate number of particles of type t based on area fraction
-        np = round(target_area / (pi * rp(t)^2));
+        Np(t) = round(target_area / (pi * rp(t)^2));
         
-        for i = 1:np
+        for i = 1:Np(t)
             placed = false;
             while ~placed
                 % Randomly place particle inside the domain
-                if np==1
+                if Np(t)==1
                     x = L/2;
                     z = D/2;
                 else
@@ -250,7 +250,5 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
             end
         end
     end
-
-    Np = length(px);
 
 end

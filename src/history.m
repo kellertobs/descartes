@@ -1,31 +1,23 @@
 % record average phase velocities
 HST.time(step) = time;
 
-% Wpc = zeros(Nz/Ns,Nx/Ns,Nt);
-% Fpc = zeros(Nz/Ns,Nx/Ns,Nt);
-% Wmc = zeros(Nz/Ns,Nx/Ns,1 );
-% Fmc = zeros(Nz/Ns,Nx/Ns,1 );
-% 
-% for i=1:Nx/Ns
-%     for j=1:Nz/Ns
-%         for it = 1:Nt
-%             indx = (i-1)*Ns+(1:Ns);
-%             indz = (j-1)*Ns+(1:Ns);
-%             Wpc(j,i,it) = sum( Wc(indz,indx).*(C(indz,indx,it)>=0) ,'all')./sum( C(indz,indx,it)>=0 ,'all');
-%             Fpc(j,i,it) = mean( C(indz,indx,it)>=0 ,'all');
-%             if isnan(Wpc(j,i,it)); Wpc(j,i,it) = 0; end
-%         end
-%         Wmc(j,i) = sum( Wc(indz,indx).*all(C(indz,indx,:)<0,3) ,'all')./sum( all(C(indz,indx,:)<0,3) ,'all');
-%         Fmc(j,i) = mean( all(C(indz,indx,:)<0,3) ,'all');
-%     end
-% end
-% DWp = Wpc - Wmc;
-
 for it = 1:Nt
-    HST.DWp_NM (step,it) = mean( DWp(tp==it) ,  'all');
-    HST.DWp_std(step,it) = std ( DWp(tp==it) ,1,'all');
+    HST.fp_sum  (step,it) = sum(fp(tp==it),  'all');     % phase fractions of sum of particles
+    HST.fp_std  (step,it) = std(fp(tp==it),1,'all');     % phase fractions standard deviations (std)
+
+    HST.Wp_mean(step,it) = mean(Wp(tp==it),  'all');     % particle velocities mean
+    HST.Wp_std (step,it) = std (Wp(tp==it),1,'all');     % particle velocities std
+
+    HST.DWp_mean(step,it) = mean(DWp(tp==it),  'all');   % particle segregation speeds mean
+    HST.DWp_std (step,it) = std (DWp(tp==it),1,'all');   % particle segregation speeds std 
+
+    HST.FHp_mean(step,it) = mean(DWp(tp==it)./DW0(it),  'all');   % hindering factor mean
+    HST.FHp_std (step,it) = std (DWp(tp==it)./DW0(it),1,'all');   % hindering factor std
+
+    % hindered settling diagnostics averaged over latter half of simulation
+    HST.fp_tavg(step,it)  = mean(HST.fp_sum  (end-floor(step/2):end,it));
+    HST.Wp_tavg(step,it)  = mean(HST.Wp_mean (end-floor(step/2):end,it));
+    HST.DWp_tavg(step,it) = mean(HST.DWp_mean(end-floor(step/2):end,it));
+    HST.FHp_tavg(step,it) = mean(HST.FHp_mean(end-floor(step/2):end,it));
 end
-HST.DWp_EM(step,:) = (rhop-mean(rho(:))).*grav.*rp.^2./geomean(eta(:));
-HST.DWp_ST(step,:) = (rhop-rhom).*grav.*rp.^2./etam;
-HST.DWp_HS(step,:) = (rhop-rhom).*grav.*rp.^2./etam.*(1-fp).^5;
-HST.FHS(step,:)    = HST.DWp_NM(step,:)./HST.DWp_ST(step,:);
+
