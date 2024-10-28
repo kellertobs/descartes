@@ -101,11 +101,9 @@ CRGB = zeros(Nz,Nx,3);
 for it=1:Nt
     CRGB = CRGB +    C(:,:,it) .*permute(repmat(cmap(it,:).',1,Nz,Nx),[2 3 1]);
     colmap(it,:) = cmap(it,:);
-    coltl{it}    = ['p',int2str(it)];
 end
 CRGB = CRGB + (1-sum(C,3)).*permute(repmat(cmap(end,:).',1,Nz,Nx),[2 3 1]);
 colmap(it+1,:) = cmap(end,:);
-coltl{it+1}    = 'mlt';
 imagesc(Xsc,Zsc,CRGB); axis ij equal tight; box on; cb = colorbar; colormap(ax(21),colmap);
 cols = ['k','r','b','g'];
 hold on;
@@ -146,15 +144,22 @@ ax(31) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs 2*axw 1.5*axh]);
 % plot segregation speed history in Fig. 3
 set(0,'CurrentFigure',fh3)
 set(fh3,'CurrentAxes',ax(31));
+ph(1) = plot(HST.time./TimeScale, HST.Wc_mean./SpeedScale,'-' ,'Color','k','LineWidth',2); axis tight; box on; hold on
+ph(2) = plot(HST.time./TimeScale,(HST.Wc_mean+HST.Wc_std)./SpeedScale,':' ,'Color','k','LineWidth',1.5);
+ph(2) = plot(HST.time./TimeScale,(HST.Wc_mean-HST.Wc_std)./SpeedScale,':' ,'Color','k','LineWidth',1.5);
+ph(3) = plot(HST.time./TimeScale, HST.Wc_tavg./SpeedScale,'-.' ,'Color','k','LineWidth',1.5);
 for it = 1:Nt
-ph(it,1) = plot(HST.time./TimeScale,-HST.DWp_mean(:,it)./SpeedScale,'-' ,'Color',cmap(it,:),'LineWidth',2); axis tight; box on; hold on
-ph(it,2) = plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)+HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
-ph(it,2) = plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)-HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
-ph(it,3) = plot(HST.time./TimeScale,-HST.DWp_tavg(:,it)./SpeedScale,'-.' ,'Color',cmap(it,:),'LineWidth',1.5);
+pph(it) = plot(HST.time./TimeScale,- HST.DWp_mean(:,it)./SpeedScale,'-' ,'Color',cmap(it,:),'LineWidth',2); axis tight; box on; hold on
+plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)+HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
+plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)-HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
+plot(HST.time./TimeScale,- HST.DWp_tavg(:,it)./SpeedScale,'-.' ,'Color',cmap(it,:),'LineWidth',1.5);
 end
+maxspd = max([-(HST.DWp_mean(:)+HST.DWp_std(:));-(HST.DWp_mean(:)-HST.DWp_std(:));])./SpeedScale;
+minspd = min([-(HST.DWp_mean(:)+HST.DWp_std(:));-(HST.DWp_mean(:)-HST.DWp_std(:));])./SpeedScale;
+line([time/2/TimeScale,time/2/TimeScale],[minspd,maxspd],'Color','k','LineStyle','--','LineWidth',1)
 set(gca,TL{:},TS{:}); 
-legend([ph(1,1:3)],{'mean','std','time avg.'},TX{:},FS{:});
-title(['Segregation Speeds'],TX{:},FS{:}); 
+legend([ph(1:3),pph(1:Nt)],[{'mean'},{'std'},{'time avg.'},strp(1:Nt)],TX{:},FS{:});
+title(['Convection \& Segregation Speeds'],TX{:},FS{:}); 
 xlabel(['Time [',TimeUnits,']'],TX{:},FS{:});
 ylabel(['Speed [',SpeedUnits,']'],TX{:},FS{:});
 
@@ -163,26 +168,29 @@ if ~exist('fh4','var'); fh4 = figure(VIS{:});
 else; set(0, 'CurrentFigure', fh4); clf;
 end
 colormap(ocean);
-fh = axb + 1.5*axh + 0*avs + axt/2;
-fw = axl + 2.0*axw + 0*ahs + axr;
+fh = axb + Nt*axh + (Nt-1)*avs + axt/2;
+fw = axl + 1.5*axw + 0*ahs + axr;
 set(fh4,UN{:},'Position',[15 15 fw fh]);
 set(fh4,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
 set(fh4,'Color','w','InvertHardcopy','off','Resize','off');
-ax(41) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs 2*axw 1.5*axh]);
+for it=1:Nt
+ax(40+it) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+(it-1)*axh+(it-1)*avs 1.5*axw axh]);
+end
 
 % plot phase speed histograms in Fig. 4
 set(0,'CurrentFigure',fh4)
-set(fh4,'CurrentAxes',ax(41));
 wbin = (max([Wp(:);Wm(:)])-min([Wp(:);Wm(:)]))/SpeedScale/25;
+limx = [min(-[Wp(:);Wm(:)]),max(-[Wp(:);Wm(:)])]/SpeedScale;
 for it=1:Nt
+    set(fh4,'CurrentAxes',ax(40+it));
     histogram(-Wp(tp==it)./SpeedScale,'BinWidth',wbin,'FaceColor',cmap(it,:),'FaceAlpha',0.7); axis tight; box on; hold on
     histogram(-Wm(tp==it)./SpeedScale,'BinWidth',wbin,'FaceColor',cmap(it,:),'FaceAlpha',0.2); axis tight; box on; hold on
+    set(gca,TL{:},TS{:},'xlim',limx);
+    if it==1; xlabel(['Speed [',SpeedUnits,']'],TX{:},FS{:}); end
+    ylabel('Bin Count [1]',TX{:},FS{:});
 end
-set(gca,TL{:},TS{:});
-title(['Phase Speed Distributions'],TX{:},FS{:}); 
-xlabel(['Speed [',SpeedUnits,']'],TX{:},FS{:});
-ylabel('Bin Count [1]',TX{:},FS{:});
-text(0.8,1.025,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
+sgtitle(['Phase Speed Distributions'],TX{:},FS{:}); 
+text(0.8,1.03,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
 
 end
 
