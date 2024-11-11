@@ -6,14 +6,14 @@ runID    =  'demo';              % run identifier
 outdir   = '../out/';            % output directory
 srcdir   = '../src/';            % source directory
 restart  =  0;                   % restart from file (0: new run; <1: restart from last; >1: restart from specified frame)
-nop      =  1;                   % output frame plotted/saved every 'nop' time steps
+nop      =  10;                  % output frame plotted/saved every 'nop' time steps
 plot_op  =  1;                   % switch on to live plot results
-save_op  =  0;                   % switch on to save output to file
+save_op  =  1;                   % switch on to save output to file
 
 % Set model domain parameters
 D        =  1;                   % chamber depth [m]
 L        =  D;                   % chamber width [m]
-N        =  300;                 % number of grid points in z-direction
+N        =  200;                 % number of grid points in z-direction
 
 % Set model timing parameters
 Nstep    =  1e5;                 % number of time steps to take

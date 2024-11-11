@@ -49,10 +49,10 @@ cmap = ocean([20,195,160,60],:).*1.1;
 cmap = [cmap;[0.95 0.90 0.85]];
 
 % set axis and border dimensions
-axh = 8.00*sqrt(D/L); axw = 8.00*sqrt(L/D)+1.50;
-ahs = 0.80; avs = 0.80;
-axb = 1.25; axt = 1.50;
-axl = 1.75; axr = 0.50;
+axh = 6.00*sqrt(D/L); axw = 6.00*sqrt(L/D)+1.50;
+ahs = 0.75; avs = 0.75;
+axb = 1.20; axt = 1.40;
+axl = 1.60; axr = 0.50;
 
 % initialize figures and axes
 if ~exist('fh1','var'); fh1 = figure(VIS{:});
@@ -61,7 +61,7 @@ end
 colormap(ocean);
 fh = axb + 2*axh + 1*avs + axt;
 fw = axl + 2*axw + 1*ahs + axr;
-set(fh1,UN{:},'Position',[5 5 fw fh]);
+set(fh1,UN{:},'Position',[1 1 fw fh]);
 set(fh1,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
 set(fh1,'Color','w','InvertHardcopy','off','Resize','off');
 ax(11) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+1*axh+1*avs axw axh]);
@@ -91,7 +91,7 @@ end
 colormap(ocean);
 fh = axb + 2.0*axh + 0*avs + axt/2;
 fw = axl + 2.0*axw + 0*ahs + axr;
-set(fh2,UN{:},'Position',[10 10 fw fh]);
+set(fh2,UN{:},'Position',[2 2 fw fh]);
 set(fh2,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
 set(fh2,'Color','w','InvertHardcopy','off','Resize','off');
 ax(21) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs 2*axw 2*axh]);
@@ -136,7 +136,7 @@ end
 colormap(ocean);
 fh = axb + 1.5*axh + 0*avs + axt/2;
 fw = axl + 2.0*axw + 0*ahs + axr;
-set(fh3,UN{:},'Position',[10 10 fw fh]);
+set(fh3,UN{:},'Position',[3 3 fw fh]);
 set(fh3,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
 set(fh3,'Color','w','InvertHardcopy','off','Resize','off');
 ax(31) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs 2*axw 1.5*axh]);
@@ -154,8 +154,8 @@ plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)+HST.DWp_std(:,it))./SpeedScale,':'
 plot(HST.time./TimeScale,-(HST.DWp_mean(:,it)-HST.DWp_std(:,it))./SpeedScale,':' ,'Color',cmap(it,:),'LineWidth',1.5);
 plot(HST.time./TimeScale,- HST.DWp_tavg(:,it)./SpeedScale,'-.' ,'Color',cmap(it,:),'LineWidth',1.5);
 end
-maxspd = max([-(HST.DWp_mean(:)+HST.DWp_std(:));-(HST.DWp_mean(:)-HST.DWp_std(:));])./SpeedScale;
-minspd = min([-(HST.DWp_mean(:)+HST.DWp_std(:));-(HST.DWp_mean(:)-HST.DWp_std(:));])./SpeedScale;
+maxspd = max([-(HST.DWp_mean(:)+HST.DWp_std(:));-(HST.DWp_mean(:)-HST.DWp_std(:));HST.Wc_mean(:)+HST.Wc_std(:)])./SpeedScale;
+minspd = min([-(HST.DWp_mean(:)+HST.DWp_std(:));-(HST.DWp_mean(:)-HST.DWp_std(:));HST.Wc_mean(:)-HST.Wc_std(:)])./SpeedScale;
 line([time/2/TimeScale,time/2/TimeScale],[minspd,maxspd],'Color','k','LineStyle','--','LineWidth',1)
 set(gca,TL{:},TS{:}); 
 legend([ph(1:3),pph(1:Nt)],[{'mean'},{'std'},{'time avg.'},strp(1:Nt)],TX{:},FS{:},'Location','southwest');
@@ -170,7 +170,7 @@ end
 colormap(ocean);
 fh = axb + Nt*axh + (Nt-1)*avs + axt/2;
 fw = axl + 1.5*axw + 0*ahs + axr;
-set(fh4,UN{:},'Position',[15 15 fw fh]);
+set(fh4,UN{:},'Position',[4 4 fw fh]);
 set(fh4,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
 set(fh4,'Color','w','InvertHardcopy','off','Resize','off');
 for it=1:Nt
