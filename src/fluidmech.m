@@ -17,20 +17,6 @@ AAR = [];  % Forcing entries for R
 % Assemble coefficients of Z-Stress Divergence (Z-momentum)
 % -------------------------------------------------------------------------
 
-% % Left boundary (periodic)
-% ii  = MapW(:,1); jj1 = ii; jj2 = MapW(:,end-1);
-% aa  = zeros(size(ii));
-% IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)];   AAL = [AAL; aa(:)+1];
-% IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)-1];
-% IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
-% 
-% % Right boundary (periodic)
-% ii  = MapW(:,end); jj1 = ii; jj2 = MapW(:,2);
-% aa  = zeros(size(ii));
-% IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)];   AAL = [AAL; aa(:)+1];
-% IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)-1];
-% IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
-
 % Internal points
 ii    = MapW;
 EtaC1 = etaco(:     ,1:end-1);  EtaC2 = etaco(:     ,2:end);
@@ -69,20 +55,6 @@ IIL = [IIL; ii(:)]; JJL = [JJL; jj4(:)];   AAL = [AAL;-(1/2*EtaC2(:)-1/3*EtaP2(:
 % -------------------------------------------------------------------------
 % Assemble coefficients of X-Stress Divergence (X-momentum)
 % -------------------------------------------------------------------------
-
-% % Top boundary (periodic)
-% ii  = MapU(1,:); jj1 = ii; jj2 = MapU(end-1,:);
-% aa  = zeros(size(ii));
-% IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)]; AAL = [AAL; aa(:)+1];
-% IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)]; AAL = [AAL; aa(:)-1];
-% IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
-% 
-% % Bottom boundary (periodic)
-% ii  = MapU(end,:); jj1 = ii; jj2 = MapU(2,:);
-% aa  = zeros(size(ii));
-% IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)]; AAL = [AAL; aa(:)+1];
-% IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)]; AAL = [AAL; aa(:)-1];
-% IIR = [IIR; ii(:)]; AAR = [AAR; aa(:)];
 
 % Internal points
 ii    = MapU;
@@ -204,45 +176,6 @@ if ~exist('DD', 'var')
     DD = sparse(IIL, JJL, AAL, NP, NW + NU);
 
 end
-
-
-% -------------------------------------------------------------------------
-% Assemble Pressure Matrix and RHS (KP, RP)
-% -------------------------------------------------------------------------
-
-% if ~exist('KP', 'var')
-% 
-%     IIL = []; JJL = []; AAL = [];  % Reset for KP assembly
-% 
-%     % boundary points
-%     ii  = [MapP(1    ,:); MapP(end,:)]; % top & bot
-%     jj1 = ii;
-%     jj2 = [MapP(end-1,:); MapP(2  ,:)];
-% 
-%     aa  = zeros(size(ii));
-%     IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)];   AAL = [AAL; aa(:)+1];
-%     IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)-1];
-% 
-%     ii  = [MapP(:,1    ); MapP(:,end)]; % left & right
-%     jj1 = ii;
-%     jj2 = [MapP(:,end-1); MapP(:,2  )];
-% 
-%     aa  = zeros(size(ii));
-%     IIL = [IIL; ii(:)]; JJL = [JJL; jj1(:)];   AAL = [AAL; aa(:)+1];
-%     IIL = [IIL; ii(:)]; JJL = [JJL; jj2(:)];   AAL = [AAL; aa(:)-1];
-% 
-%     % Assemble KP matrix
-%     KP = sparse(IIL, JJL, AAL, NP, NP);
-% 
-% end
-% 
-% % RHS assembly for pressure (RP)
-% IIR = []; AAR = [];
-% ii  = MapP(2:end-1,2:end-1);
-% rr  = zeros(size(ii));
-% IIR = [IIR; ii(:)]; AAR = [AAR; rr(:)];
-% 
-% RP = sparse(IIR, ones(size(IIR)), AAR, NP, 1);
 
 KP = sparse(NP, NP);
 RP = sparse(NP,  1);

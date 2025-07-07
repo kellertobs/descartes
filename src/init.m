@@ -22,7 +22,37 @@ fprintf('*************************************************************\n');
 fprintf('\n   run ID: %s \n\n', runID);
 
 % Load custom colormap for visualization
-load ocean;
+% load and process custom colormaps
+switch colourmap
+    case 'ocean'
+        load ./colmap/ocean.mat
+        colmap = ocean;   
+    case 'batlow'
+        load ./colmap/batlow.mat 
+        colmap = batlow;
+    case 'batlowW'
+        load ./colmap/batlowW.mat
+        colmap = batlowW;
+    case 'batlowK'
+        load ./colmap/batlowK.mat
+        colmap = batlowK;
+    case 'lipari'
+        load ./colmap/lipari.mat
+        colmap = lipari;  
+    case 'glasgow'
+        load ./colmap/glasgow.mat;
+        colmap = glasgow; 
+    case 'navia'
+        load ./colmap/navia.mat;
+        colmap = navia;  
+    case 'lapaz'
+        load ./colmap/lapaz.mat;
+        colmap = lapaz;  
+    case 'lajolla'
+        load ./colmap/lajolla.mat;
+        colmap = lajolla;  
+end
+cmap = typeclrs;
 
 % Set boundary conditions for advection (periodic by default)
 BCA = {'periodic', 'periodic'};  % Boundary condition on advection (top/bot, sides)
@@ -85,6 +115,10 @@ W = zeros(Nz+1, Nx); upd_W = zeros(size(W));
 P = zeros(Nz, Nx); Vel = zeros(Nz, Nx); upd_P = zeros(size(P));  res_P = 0*P;
 SOL = [W(:); U(:); P(:)];
 
+Wc  = (W(1:end-1,:) + W(2:end,:)) / 2;
+Uc  = (U(:,1:end-1) + U(:,2:end)) / 2;
+Vel = sqrt(Wc.^2 + Uc.^2);
+
 % Initialize particle fields
 [xp, zp, tp, Np] = generate_particles(Nt, rp, fp, D, L, pord);
 
@@ -127,21 +161,6 @@ indp0 = indp;
 
 % Overwrite fields from file if restarting the run
 if restart
-    handle_restart();
-else
-    % Complete, plot, and save the initial condition
-    fluidmech;
-    update;
-    output;
-end
-
-restart = 0;
-
-
-%% Helper Functions
-
-function handle_restart()
-    % Handle restart logic based on the restart flag
     if restart < 0  % Restart from the last continuation frame
         name = fullfile(outdir, runID, [runID '_cont.mat']);
     elseif restart > 0  % Restart from a specified continuation frame
@@ -150,7 +169,7 @@ function handle_restart()
     
     if exist(name, 'file')
         fprintf('\n   Restarting from %s \n\n', name);
-        load(name, 'U', 'W', 'P', 'C', 'rho', 'eta', 'HST', 'dCdt', 'eII', 'tII', 'dt', 'time', 'step');
+        load(name, 'U', 'W', 'P', 'C', 'rho', 'eta', 'dCdt', 'eII', 'tII', 'dt', 'time', 'step');
         name = fullfile(outdir, runID, [runID '_HST']);
         load(name, 'HST');
 
@@ -174,7 +193,17 @@ function handle_restart()
         history;
         output;
     end
+else
+    % Complete, plot, and save the initial condition
+    fluidmech;
+    update;
+    output;
 end
+
+restart = 0;
+
+
+%% Helper Functions
 
 function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
     % Inputs:

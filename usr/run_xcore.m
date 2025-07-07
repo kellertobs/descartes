@@ -2,7 +2,7 @@
 clear; close all;
 
 % Set Run control and I/O parameters
-runID    =  'demo';              % run identifier
+runID    =  'xcore_D0_d2_e1_x01';    % run identifier
 outdir   = '../out/';            % output directory
 srcdir   = '../src/';            % source directory
 restart  =  0;                   % restart from file (0: new run; <1: restart from last; >1: restart from specified frame)
@@ -13,7 +13,7 @@ save_op  =  1;                   % switch on to save output to file
 colourmap = 'ocean';
 
 load ../src/colmap/ocean.mat;
-typeclrs = ocean([195,20,160],:).*1.1;
+typeclrs = ocean(20,:).*1.1;
 typeclrs = [typeclrs;[0.95 0.90 0.85]];
 
 % Set model domain parameters
@@ -31,12 +31,12 @@ CFL      =  1.00;                % (physical) time stepping Courant-Friedrich-Le
 grav     =  10;                              % gravity [m/s2]
 pord     =  10;                              % particle ordering parameter (larger for more regular distribution)
 seed     =  15;                              % random number generator seed for reproducibility
-Nt       =  3;                               % number of particle types
-rp       =  [0.03,0.02,0.01];                % particle radius [m]
-fp       =  [0.02,0.03,0.01];                % particle fraction [vol]
-rhop     =  [3200,2600,4200];                % particle density [kg/m3]
-strp     =  {'pxn','plg','spn','mlt'};       % name strings for particle and fluid phases
-rhom     =  2800;                            % melt density [kg/m3]
+Nt       =  1;                               % number of particle types
+rp       =  [0.01];                % particle radius [m]
+fp       =  [0.01];                % particle fraction [vol]
+rhop     =  [3200];                % particle density [kg/m3]
+strp     =  {'xtl','mlt'};         % name strings for particle and fluid phases
+rhom     =  2700;                            % melt density [kg/m3]
 etap     =  1e6;                             % particle-melt viscosity contrast [Pas]
 etam     =  1e1;                             % melt viscosity [Pas]
 DW0      =  (rhop-rhom).*grav.*rp.^2./etam;  % Stokes particle settling speeds

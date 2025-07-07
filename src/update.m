@@ -21,14 +21,6 @@ if step > 0
 
     C = max(0,min(1, C + upd_C ));
 
-
-    % ---------------------------------------------------------------------
-    % UPDATE PARTICLE VELOCITIES (Wp, Up) AND MELT VELOCITIES (Wm, Um)
-    % ---------------------------------------------------------------------
-
-    [fp,Wp,Up,Wm,Um,DWp,DUp] = phase_vel(Wc,Uc,xp,zp,rp,tp,Np,XX,ZZ,L,D);
-
-
     % ---------------------------------------------------------------------
     % UPDATE PARTICLE POSITIONS
     % ---------------------------------------------------------------------
@@ -51,18 +43,16 @@ if step > 0
 
 end
 
+% ---------------------------------------------------------------------
+% UPDATE PARTICLE VELOCITIES (Wp, Up) AND MELT VELOCITIES (Wm, Um)
+% ---------------------------------------------------------------------
 
-% update particle indicator fields
-indp = zeros(Nz, Nx, Nt);
-for ip = 1:sum(Np)
-    % Update the particle indicator field for a given particle
-    indp(:,:,tp(ip)) = min(1, indp(:,:,tp(ip)) + double(sqrt((XX - xp(ip)).^2 + (ZZ - zp(ip)).^2) < rp(tp(ip))));
-    % Apply periodic boundary conditions in X and Z
-    indp(:,:,tp(ip)) = min(1, indp(:,:,tp(ip)) + double(sqrt((XX - xp(ip) - L).^2 + (ZZ - zp(ip)).^2) < rp(tp(ip))));
-    indp(:,:,tp(ip)) = min(1, indp(:,:,tp(ip)) + double(sqrt((XX - xp(ip) + L).^2 + (ZZ - zp(ip)).^2) < rp(tp(ip))));
-    indp(:,:,tp(ip)) = min(1, indp(:,:,tp(ip)) + double(sqrt((XX - xp(ip)).^2 + (ZZ - zp(ip) - D).^2) < rp(tp(ip))));
-    indp(:,:,tp(ip)) = min(1, indp(:,:,tp(ip)) + double(sqrt((XX - xp(ip)).^2 + (ZZ - zp(ip) + D).^2) < rp(tp(ip))));
-end
+[fp,Wp,Up,Vp,Wm,Um,Vm,DWp,DUp,DVp,indp,indm] = phase_vel(Wc,Uc,xp,zp,rp,tp,Np,XX,ZZ,L,D);
+
+
+% ---------------------------------------------------------------------
+% UPDATE EQUILIBRIUM CONCENTRATIONS (Cq)
+% ---------------------------------------------------------------------
 
 Cq = get_conc(XX,ZZ,xp,zp,tp,rp,indp,L,D,Nz,Nx,Nt,Np);
 
@@ -74,13 +64,13 @@ Cq = get_conc(XX,ZZ,xp,zp,tp,rp,indp,L,D,Nz,Nx,Nt,Np);
 % Update eta (viscosity field)
 eta = etam .* ones(Nz, Nx);
 for it = 1:Nt
-    eta = eta .* etap.^(indp(:,:,it) > 0);
+    eta = eta .* etap.^indp(:,:,it);
 end
 
 % Update rho (density field)
 rho = rhom .* ones(Nz, Nx);
 for it = 1:Nt
-    rho = rho + (rhop(it) - rhom) .* (indp(:,:,it) > 0);
+    rho = rho + (rhop(it) - rhom) .* indp(:,:,it);
 end
 
 % Compute averaged rho values at cell faces
@@ -146,53 +136,69 @@ Re = Vel .* rho .* D ./ eta;  % Reynolds number calculation
 % HELPER FUNCTIONS
 % -------------------------------------------------------------------------
 
-function [fp,Wp,Up,Wm,Um,DWp,DUp] = phase_vel(Wc,Uc,xp,zp,rp,tp,Np,XX,ZZ,L,D)
+function [fp,Wp,Up,Vp,Wm,Um,Vm,DWp,DUp,DVp,indpt,indmt] = phase_vel(Wc,Uc,xp,zp,rp,tp,Np,XX,ZZ,L,D)
 
 Wp = zeros(sum(Np), 1);  Up = zeros(sum(Np), 1);
 Wm = zeros(sum(Np), 1);  Um = zeros(sum(Np), 1);
 fp = zeros(sum(Np), 1);
-rv = D./sqrt(Np)/2;
+rv = rp + D./sqrt(sum(Np))/2;
+
+% update particle indicator fields
+[Nz,Nx] = size(Wc);
+Nt      = length(Np);
+indp    = zeros(Nz, Nx, sum(Np));
+indm    = zeros(Nz, Nx, sum(Np));
+for ip = 1:sum(Np)
+    % Update the particle indicator field for a given particle
+    indp(:,:,ip) = min(1, indp(:,:,ip) + double(sqrt((XX - xp(ip)    ).^2 + (ZZ - zp(ip)    ).^2) < rp(tp(ip))));
+    % Apply periodic boundary conditions in X and Z
+    indp(:,:,ip) = min(1, indp(:,:,ip) + double(sqrt((XX - xp(ip) - L).^2 + (ZZ - zp(ip)    ).^2) < rp(tp(ip))));
+    indp(:,:,ip) = min(1, indp(:,:,ip) + double(sqrt((XX - xp(ip) + L).^2 + (ZZ - zp(ip)    ).^2) < rp(tp(ip))));
+    indp(:,:,ip) = min(1, indp(:,:,ip) + double(sqrt((XX - xp(ip)    ).^2 + (ZZ - zp(ip) - D).^2) < rp(tp(ip))));
+    indp(:,:,ip) = min(1, indp(:,:,ip) + double(sqrt((XX - xp(ip)    ).^2 + (ZZ - zp(ip) + D).^2) < rp(tp(ip))));
+    indp(:,:,ip) = min(1, indp(:,:,ip) + double(sqrt((XX - xp(ip) - L).^2 + (ZZ - zp(ip) - D).^2) < rp(tp(ip))));
+    indp(:,:,ip) = min(1, indp(:,:,ip) + double(sqrt((XX - xp(ip) + L).^2 + (ZZ - zp(ip) - D).^2) < rp(tp(ip))));
+    indp(:,:,ip) = min(1, indp(:,:,ip) + double(sqrt((XX - xp(ip) - L).^2 + (ZZ - zp(ip) + D).^2) < rp(tp(ip))));
+    indp(:,:,ip) = min(1, indp(:,:,ip) + double(sqrt((XX - xp(ip) + L).^2 + (ZZ - zp(ip) + D).^2) < rp(tp(ip))));
+
+    % Update the particle indicator field for a given particle
+    indm(:,:,ip) = min(1, indm(:,:,ip) + double(sqrt((XX - xp(ip)    ).^2 + (ZZ - zp(ip)    ).^2) < rv(tp(ip))));
+    % Apply periodic boundary conditions in X and Z
+    indm(:,:,ip) = min(1, indm(:,:,ip) + double(sqrt((XX - xp(ip) - L).^2 + (ZZ - zp(ip)    ).^2) < rv(tp(ip))));
+    indm(:,:,ip) = min(1, indm(:,:,ip) + double(sqrt((XX - xp(ip) + L).^2 + (ZZ - zp(ip)    ).^2) < rv(tp(ip))));
+    indm(:,:,ip) = min(1, indm(:,:,ip) + double(sqrt((XX - xp(ip)    ).^2 + (ZZ - zp(ip) - D).^2) < rv(tp(ip))));
+    indm(:,:,ip) = min(1, indm(:,:,ip) + double(sqrt((XX - xp(ip)    ).^2 + (ZZ - zp(ip) + D).^2) < rv(tp(ip))));
+    indm(:,:,ip) = min(1, indm(:,:,ip) + double(sqrt((XX - xp(ip) - L).^2 + (ZZ - zp(ip) - D).^2) < rv(tp(ip))));
+    indm(:,:,ip) = min(1, indm(:,:,ip) + double(sqrt((XX - xp(ip) + L).^2 + (ZZ - zp(ip) - D).^2) < rv(tp(ip))));
+    indm(:,:,ip) = min(1, indm(:,:,ip) + double(sqrt((XX - xp(ip) - L).^2 + (ZZ - zp(ip) + D).^2) < rv(tp(ip))));
+    indm(:,:,ip) = min(1, indm(:,:,ip) + double(sqrt((XX - xp(ip) + L).^2 + (ZZ - zp(ip) + D).^2) < rv(tp(ip))));
+end
+indm = max(0,indm - indp - sum(indp,3).*(1-indp));
+indp = indp + (diff(indp(:,[end-1,1:end,2],:),2,2) + diff(indp([end-1,1:end,2],:,:),2,1))/8;
+indm = indm + (diff(indm(:,[end-1,1:end,2],:),2,2) + diff(indm([end-1,1:end,2],:,:),2,1))/8;
 
 for ip = 1:sum(Np)
-    indp   =  sqrt((XX-xp(ip)  ).^2 + (ZZ-zp(ip)  ).^2) < rp(tp(ip)) ...
-           |  sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)  ).^2) < rp(tp(ip)) ...
-           |  sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)  ).^2) < rp(tp(ip)) ...
-           |  sqrt((XX-xp(ip)  ).^2 + (ZZ-zp(ip)-D).^2) < rp(tp(ip)) ...
-           |  sqrt((XX-xp(ip)  ).^2 + (ZZ-zp(ip)+D).^2) < rp(tp(ip)) ...
-           |  sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)-D).^2) < rp(tp(ip)) ...
-           |  sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)-D).^2) < rp(tp(ip)) ...
-           |  sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)+D).^2) < rp(tp(ip)) ...
-           |  sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)+D).^2) < rp(tp(ip));
-    Wp(ip) = sum(Wc.*indp,'all') ./ sum(indp,'all');
-    Up(ip) = sum(Uc.*indp,'all') ./ sum(indp,'all');
-    fp(ip) = sum(indp,'all')./sum(ones(size(XX)),'all');
-
-    indm   = (sqrt((XX-xp(ip)  ).^2 + (ZZ-zp(ip)).^2  ) >= rp(tp(ip))  ...
-           |  sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)).^2  ) >= rp(tp(ip))  ...
-           |  sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)).^2  ) >= rp(tp(ip))  ...
-           |  sqrt((XX-xp(ip)  ).^2 + (ZZ-zp(ip)-D).^2) >= rp(tp(ip))  ...
-           |  sqrt((XX-xp(ip)  ).^2 + (ZZ-zp(ip)+D).^2) >= rp(tp(ip))  ...
-           |  sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)-D).^2) >= rp(tp(ip))  ...
-           |  sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)-D).^2) >= rp(tp(ip))  ...
-           |  sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)+D).^2) >= rp(tp(ip))  ...
-           |  sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)+D).^2) >= rp(tp(ip))) ...
-           & (sqrt((XX-xp(ip)  ).^2 + (ZZ-zp(ip)).^2  ) <  rv(tp(ip))  ...
-           |  sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)).^2  ) <  rv(tp(ip))  ...
-           |  sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)).^2  ) <  rv(tp(ip))  ...
-           |  sqrt((XX-xp(ip)  ).^2 + (ZZ-zp(ip)-D).^2) <  rv(tp(ip))  ...
-           |  sqrt((XX-xp(ip)  ).^2 + (ZZ-zp(ip)+D).^2) <  rv(tp(ip))  ...
-           |  sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)-D).^2) <  rv(tp(ip))  ...
-           |  sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)-D).^2) <  rv(tp(ip))  ...
-           |  sqrt((XX-xp(ip)-L).^2 + (ZZ-zp(ip)+D).^2) <  rv(tp(ip))  ...
-           |  sqrt((XX-xp(ip)+L).^2 + (ZZ-zp(ip)+D).^2) <  rv(tp(ip))) ...
-           &  all(indp==0,3);
-    Wm(ip) = sum(Wc.*indm,'all') ./ sum(indm,'all');
-    Um(ip) = sum(Uc.*indm,'all') ./ sum(indm,'all');
+    Wp(ip) = sum(Wc.*indp(:,:,ip),'all') ./ sum(indp(:,:,ip),'all');
+    Up(ip) = sum(Uc.*indp(:,:,ip),'all') ./ sum(indp(:,:,ip),'all');
+    Vp(ip) = sqrt(Wp(ip).^2 + Up(ip).^2);
+    fp(ip) = sum(indp(:,:,ip),'all')./sum(ones(size(XX)),'all');
+    Wm(ip) = sum(Wc.*indm(:,:,ip),'all') ./ sum(indm(:,:,ip),'all');
+    Um(ip) = sum(Uc.*indm(:,:,ip),'all') ./ sum(indm(:,:,ip),'all');
+    Vm(ip) = sqrt(Wm(ip).^2 + Um(ip).^2);
 end
 
 % Particle segregation speeds
 DWp = Wp - Wm;
 DUp = Up - Um;
+DVp = sqrt(DWp.^2 + DUp.^2);
+
+% Sum up particle indicator function by type
+indpt = zeros(Nz,Nx,Nt);
+indmt = zeros(Nz,Nx,Nt);
+for it=1:Nt
+    indpt(:,:,it) = min(1,sum(indp(:,:,tp==it),3));
+    indmt(:,:,it) = min(1,sum(indm(:,:,tp==it),3));
+end
 
 end
 
@@ -201,7 +207,7 @@ function Cq = get_conc(XX,ZZ,xp,zp,tp,rp,indp,L,D,Nz,Nx,Nt,Np)
 Cq = zeros(Nz,Nx,Nt);
 for ip=1:sum(Np)
     ff = exp(1/6);
-    rr = (1.5*rp(tp(ip))).^2;
+    rr = (1.25*rp(tp(ip))).^2;
     Cq(:,:,tp(ip)) = min(1,Cq(:,:,tp(ip)) + ff.*exp(-(XX-xp(ip)  ).^2./rr) .* exp(-(ZZ-zp(ip)  ).^2./rr));
     Cq(:,:,tp(ip)) = min(1,Cq(:,:,tp(ip)) + ff.*exp(-(XX-xp(ip)-L).^2./rr) .* exp(-(ZZ-zp(ip)  ).^2./rr));
     Cq(:,:,tp(ip)) = min(1,Cq(:,:,tp(ip)) + ff.*exp(-(XX-xp(ip)+L).^2./rr) .* exp(-(ZZ-zp(ip)  ).^2./rr));
@@ -211,7 +217,9 @@ for ip=1:sum(Np)
     Cq(:,:,tp(ip)) = min(1,Cq(:,:,tp(ip)) + ff.*exp(-(XX-xp(ip)+L).^2./rr) .* exp(-(ZZ-zp(ip)-D).^2./rr));
     Cq(:,:,tp(ip)) = min(1,Cq(:,:,tp(ip)) + ff.*exp(-(XX-xp(ip)-L).^2./rr) .* exp(-(ZZ-zp(ip)+D).^2./rr));
     Cq(:,:,tp(ip)) = min(1,Cq(:,:,tp(ip)) + ff.*exp(-(XX-xp(ip)+L).^2./rr) .* exp(-(ZZ-zp(ip)+D).^2./rr));
-    Cq(:,:,tp(ip)) = Cq(:,:,tp(ip)).*(1-sum(indp,3)+indp(:,:,tp(ip)));
 end
-
+for it=1:length(Np)
+    Cq(:,:,it) = Cq(:,:,it).*(1-sum(indp,3)+indp(:,:,it));
+end
+Cq = Cq./max(1,sum(Cq,3));
 end
