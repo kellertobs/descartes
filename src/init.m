@@ -74,6 +74,12 @@ Zc = Zc(2:end-1);
 Nx = length(Xc); % grid size in x-direction
 Nz = length(Zc); % grid size in z-direction
 
+% prepare wave number array for Gaussian smoothing
+[kpx, kpz] = ndgrid( ...
+    2*pi*ifftshift((0:Nz-1) - floor(Nz/2)) / (Nz*h), ...
+    2*pi*ifftshift((0:Nx-1) - floor(Nx/2)) / (Nx*h)  );
+kp2 = kpx.^2 + kpz.^2;
+
 % Set time unit conversion factors
 hr       =  3600;                % seconds per hour
 yr       =  hr*24*365.25;        % seconds per year
@@ -197,6 +203,7 @@ else
     % Complete, plot, and save the initial condition
     fluidmech;
     update;
+    history;
     output;
 end
 
