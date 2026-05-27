@@ -184,10 +184,10 @@ RP = sparse(NP,  1);
 nzp = round(Nz/2);  % Midpoint in Z
 nxp = round(Nx/2);  % Midpoint in X
 np0 = MapP(nzp,nxp);    % Fixed point in pressure
-DD(np0,:)  = 0;
-KP(np0,:)  = 0;
-KP(np0,np0) = sqrt(h^2 / geomean(eta(:)));
-RP(np0,:)  = 0;
+DD(np0,:)   = 0;
+KP(np0,:)   = 0;
+KP(np0,np0) = sqrt(h^2 / (eta(nzp,nxp)));
+RP(np0,:)   = 0;
 
 
 % -------------------------------------------------------------------------
@@ -201,20 +201,42 @@ LL = [KV GG; ...
 RR = [RV; RP];
 
 % Scale system for numerical stability
-SCL = sqrt(abs(diag(LL)));
-SCL = diag(sparse(1 ./ (SCL + sqrt(h^2 / geomean(eta(:))))));
+SCL = (abs(diag(LL))).^0.5;
+SCL = diag(sparse( 1./(SCL + sqrt([zeros(NU+NW,1); eta(:)])) ));
 
+FF  = SCL*(LL*SOL - RR);
 LL  = SCL*LL*SCL;
-RR  = SCL*RR;
 
-% Solve linear system
-SOL = SCL * (LL \ RR);
 
-% Map solution vector back to velocity and pressure fields
-W = full(reshape(SOL(MapW(:))        ,Nz+1,Nx));  % matrix z-velocity
-U = full(reshape(SOL(MapU(:))        ,Nz,Nx+1));  % matrix x-velocity
-P = full(reshape(SOL(MapP(:)+(NW+NU)),Nz,Nx));  % matrix dynamic pressure
-P = P - mean(P(:));
+%% Solve linear system of equations for W, U, P
+
+if ~exist('pcol','var'); pcol = colamd(LL); end % get column permutation for sparsity pattern once per run
+dLL         = decomposition(LL(:,pcol), 'lu');  % get LU-decomposition for consistent performance of LL \ RR
+UPD(pcol,1) = dLL \ FF;                         % solve permuted decomposed system
+UPD         = SCL*UPD;
+
+% map solution vector to 2D arrays
+upd_W = -full(reshape(UPD(MapW(:))        ,Nz+1,Nx  ));  % matrix z-velocity
+upd_U = -full(reshape(UPD(MapU(:))        ,Nz  ,Nx+1));  % matrix x-velocity
+upd_P = -full(reshape(UPD(MapP(:)+(NW+NU)),Nz  ,Nx  ));  % matrix dynamic pressure
+
+% update solution
+W = W + upd_W;
+U = U + upd_U;
+P = P + upd_P;
+SOL = [W(:);U(:);P(:)];
+
+% LL  = SCL*LL*SCL;
+% RR  = SCL*RR;
+% 
+% % Solve linear system
+% SOL = SCL * (LL \ RR);
+% 
+% % Map solution vector back to velocity and pressure fields
+% W = full(reshape(SOL(MapW(:))        ,Nz+1,Nx));  % matrix z-velocity
+% U = full(reshape(SOL(MapU(:))        ,Nz,Nx+1));  % matrix x-velocity
+% P = full(reshape(SOL(MapP(:)+(NW+NU)),Nz,Nx));  % matrix dynamic pressure
+% P = P - mean(P(:));
 
 % Calculate velocity magnitude for diagnostics
 Wc  = (W(1:end-1,:) + W(2:end,:)) / 2;
