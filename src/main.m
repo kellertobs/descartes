@@ -15,9 +15,9 @@ while time <= tend && step <= Nstep
     store;
     
     % Initialize nonlinear iteration loop variables
-    resnorm = 1;         % Residual norm (for convergence check)
+    resnorm  = 1;        % Residual norm (for convergence check)
     resnorm0 = 1;        % Initial residual norm (for relative convergence)
-    iter = 1;            % Nonlinear iteration counter
+    iter     = 1;        % Nonlinear iteration counter
     
     % Nonlinear iteration loop (solve until convergence or max iterations)
     while resnorm > atol && resnorm/resnorm0 > rtol && iter <= maxit

@@ -54,7 +54,7 @@ end
 % UPDATE EQUILIBRIUM CONCENTRATIONS (Cq)
 % ---------------------------------------------------------------------
 
-[chi,Cq] = get_conc(rp,indp,kp2,h,Nz,Nx,Nt);
+[chi,Cq] = get_conc(rp,indp,kp2,Nz,Nx,Nt);
 
 
 % -------------------------------------------------------------------------
@@ -92,7 +92,7 @@ etaco = (eta(icz(1:end-1), icx(1:end-1)) .* eta(icz(1:end-1), icx(2:end)) ...
 % -------------------------------------------------------------------------
 % Compute time step size based on CFL condition
 dta = h / (2 * max(abs([U(:); W(:)])));
-dt = min([1.1 * dto, CFL * dta]);
+dt  = min([1.1 * dto, CFL * dta]);
 
 
 % -------------------------------------------------------------------------
@@ -181,7 +181,7 @@ end
 
 end
 
-function [chi,Cq] = get_conc(rp,indp,kp2,h,Nz,Nx,Nt)
+function [chi,Cq] = get_conc(rp,indp,kp2,Nz,Nx,Nt)
 
 chi = zeros(Nz,Nx,Nt);
 Cq  = zeros(Nz,Nx,Nt);
