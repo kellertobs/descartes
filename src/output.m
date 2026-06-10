@@ -55,8 +55,8 @@ if ~exist('fh1','var'); fh1 = figure(VIS{:});
 else; set(0, 'CurrentFigure', fh1); clf;
 end
 colormap(colmap);
-fh = axb + 2*axh + 1*avs + axt;
-fw = axl + 2*axw + 1*ahs + axr;
+fh = axb + 2*axh + 1*ahs + axt;
+fw = axl + 2*axw + 1*avs + axr;
 set(fh1,UN{:},'Position',[1 1 fw fh]);
 set(fh1,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
 set(fh1,'Color','w','InvertHardcopy','off','Resize','off');
@@ -86,21 +86,60 @@ if ~exist('fh2','var'); fh2 = figure(VIS{:});
 else; set(0, 'CurrentFigure', fh2); clf;
 end
 colormap(colmap);
-fh = axb + 2.0*axh + 0*avs + axt/2;
-fw = axl + 2.0*axw + 0*ahs + axr;
+fh = axb + 1*axh + 0*avs + axt;
+fw = axl + Nt*axw + (Nt-1)*ahs + axr;
 set(fh2,UN{:},'Position',[2 2 fw fh]);
 set(fh2,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
 set(fh2,'Color','w','InvertHardcopy','off','Resize','off');
-ax(21) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs 2*axw 2*axh]);
+for it=1:Nt
+    ax(20+it) = axes(UN{:},'position',[axl+(it-1)*axw+(it-1)*ahs axb+0*axh+0*avs axw axh]);
+end
 
-% plot melt mixing in Fig. 2
-set(fh2,'CurrentAxes',ax(21));
+% plot phase fractions
+for it=1:Nt
+    set(fh2,'CurrentAxes',ax(20+it));
+    imagesc(Xsc,Zsc,chi(:,:,it)); axis ij equal tight; box on; cb = colorbar; colormap(ax(20+it),ocean);
+    set(cb,TL{:},TS{:}); 
+    set(gca,TL{:},TS{:}); title(['$\chi$(',int2str(it),') [vol]'],TX{:},FS{:}); 
+    xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
+    if it==1
+       ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:});
+    else
+        set(gca,'YTickLabel',[]);
+    end
+end
+if Nt == 1
+    set(fh2,'CurrentAxes',ax(21));
+    text(0.5,1.15,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
+elseif Nt == 2
+    set(fh2,'CurrentAxes',ax(22));
+    text(-0.1,1.15,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
+else
+    set(fh2,'CurrentAxes',ax(22));
+    text(0.5,1.15,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
+end
+
+% initialize figure and axes
+if ~exist('fh3','var'); fh3 = figure(VIS{:});
+else; set(0, 'CurrentFigure', fh3); clf;
+end
+colormap(colmap);
+fh = axb + 1*axh + 0*avs + axt;
+fw = axl + 2*axw + 1*ahs + axr;
+set(fh3,UN{:},'Position',[3 3 fw fh]);
+set(fh3,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
+set(fh3,'Color','w','InvertHardcopy','off','Resize','off');
+ax(31) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs axw axh]);
+ax(32) = axes(UN{:},'position',[axl+1*axw+1*ahs axb+0*axh+0*avs axw axh]);
+
+% plot melt mixing proxy
+set(fh3,'CurrentAxes',ax(31));
 CRGB = zeros(Nz,Nx,3);
 for it=1:Nt
     CRGB = CRGB +    C(:,:,it) .*permute(repmat(typeclrs(it,:).',1,Nz,Nx),[2 3 1]);
 end
 CRGB = CRGB + (1-sum(C,3)).*permute(repmat(typeclrs(end,:).',1,Nz,Nx),[2 3 1]);
-imagesc(Xsc,Zsc,CRGB); axis ij equal tight; box on; cb = colorbar; colormap(ax(21),typeclrs);
+imagesc(Xsc,Zsc,CRGB); axis ij equal tight; box on; cb = colorbar; colormap(typeclrs); clim([-1 0]);
 hold on;
 if plot_crc
     rv = rp + D./sqrt(sum(Np))/2;
@@ -122,22 +161,9 @@ xlim([0 L]);
 ylim([0 D]);
 set(cb,TL{:},TS{:},'Ticks',linspace(1/2/(Nt+1),1-1/2/(Nt+1),Nt+1),'TickLabels',strp); set(gca,TL{:},TS{:});
 title(['Melt Mixing'],TX{:},FS{:}); ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
-text(0.8,1.025,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
-
-% initialize figure and axes
-if ~exist('fh3','var'); fh3 = figure(VIS{:});
-else; set(0, 'CurrentFigure', fh3); clf;
-end
-colormap(colmap);
-fh = axb + 2.0*axh + 0*avs + axt/2;
-fw = axl + 2.0*axw + 0*ahs + axr;
-set(fh3,UN{:},'Position',[3 3 fw fh]);
-set(fh3,'PaperUnits','Centimeters','PaperPosition',[0 0 fw fh],'PaperSize',[fw fh]);
-set(fh3,'Color','w','InvertHardcopy','off','Resize','off');
-ax(31) = axes(UN{:},'position',[axl+0*axw+0*ahs axb+0*axh+0*avs 2*axw 2*axh]);
 
 % plot particle traces in Fig. 3
-set(fh3,'CurrentAxes',ax(31));
+set(fh3,'CurrentAxes',ax(32));
 imagesc(Xc,Zc,0.*rho); colormap(typeclrs(end,:)); axis equal tight; hold on; cb = colorbar; colormap(typeclrs); clim([-1 0]);
 k = 0;
 for it=1:Nt
@@ -147,15 +173,15 @@ for it=1:Nt
         shade = (is-is(1))/is(1);
         x1 = HST.pos(is,k,2);
         z1 = HST.pos(is,k,1);
-        scatter(x1,z1,(rp(it)*300/D).^2,typeclrs(it,:).*shade.'+typeclrs(end,:).*(1-shade.'),'filled','MarkerFaceAlpha','flat','AlphaData',shade.^4,'AlphaDataMapping','none');
-        scatter(x1(end),z1(end),(rp(it)*600/D).^2,typeclrs(it,:),'filled');
+        scatter(x1,z1,(rp(it)*200/D).^2,typeclrs(it,:).*shade.'+typeclrs(end,:).*(1-shade.'),'filled','MarkerFaceAlpha','flat','AlphaData',shade.^4,'AlphaDataMapping','none');
+        scatter(x1(end),z1(end),(rp(it)*500/D).^2,typeclrs(it,:),'filled');
     end
 end
 xlim([0 L]);
 ylim([0 D]);
 set(cb,TL{:},TS{:},'Ticks',linspace(-1+1/2/(Nt+1),-1/2/(Nt+1),Nt+1),'TickLabels',strp); set(gca,TL{:},TS{:});
 title(['Phase Traces'],TX{:},FS{:}); ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
-text(0.8,1.025,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
+text(-0.1,1.1,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
 
 % if step>0
 

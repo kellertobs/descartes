@@ -54,7 +54,7 @@ end
 % UPDATE EQUILIBRIUM CONCENTRATIONS (Cq)
 % ---------------------------------------------------------------------
 
-Cq = get_conc(rp,indp,kp2,Nz,Nx,Nt);
+[chi,Cq] = get_conc(rp,indp,kp2,h,Nz,Nx,Nt);
 
 
 % -------------------------------------------------------------------------
@@ -181,19 +181,24 @@ end
 
 end
 
-function Cq = get_conc(rp,indp,kp2,Nz,Nx,Nt)
+function [chi,Cq] = get_conc(rp,indp,kp2,h,Nz,Nx,Nt)
 
+chi = zeros(Nz,Nx,Nt);
+Cq  = zeros(Nz,Nx,Nt);
 
-
-Cq = zeros(Nz,Nx,Nt);
 for it=1:Nt
-    ff = exp(1/6);
-    rr = (2*rp(it)).^2;
+    % rr = (2*rp(it));
+    % Gk = exp(-rr^2/2 * kp2);
+    % Cq(:,:,it) = ff.*real(ifft2(Gk .* fft2(indp(:,:,it))));
+    tmask = repmat(indp(:,:,it),3,3);
+    dist  = -bwdist(tmask);
+    Ct    = exp(-dist.^2/(2*2^2));
+    Cq(:,:,it) = Ct(Nz+1:2*Nz, Nx+1:2*Nx);
+    rr = (10*rp(it)/2);
     Gk = exp(-rr^2/2 * kp2);
-    Cq(:,:,it) = ff .* real(ifft2(Gk .* fft2(indp(:,:,it))));
+    chi(:,:,it) = real(ifft2(Gk .* fft2(indp(:,:,it))));
 end
 for it=1:Nt
     Cq(:,:,it) = Cq(:,:,it).*(1-sum(indp,3)+indp(:,:,it));
 end
-Cq = Cq./max(1,sum(Cq,3));
 end
