@@ -9,7 +9,7 @@ if step > 0
     % Advect particle fields
     advn = -advect(C, U(:, :), W(:, :), h, {ADVN, ''}, [1, 2], BCA);
    
-    src  = max(0,Cq-C)/2/dt + min(0,Cq-C)/2000/dt;
+    src  = max(0,Cq-C)/2/dt + min(0,Cq-C)/1000/dt;
 
     advn = advn + src;
 
@@ -17,7 +17,7 @@ if step > 0
     res_C = (a1 * C - a2 * Co - a3 * Coo) / dt - (b1 * advn + b2 * dCdto + b3 * dCdtoo);
 
     % Semi-implicit update of major component density
-    upd_C = - alpha * res_C * dt / a1 + beta * upd_C;
+    upd_C = - alpha * res_C * dt / a1;
 
     C = max(0,min(1, C + upd_C ));
 
@@ -29,10 +29,10 @@ if step > 0
     res_xp = (a1*xp - a2*xpo - a3*xpoo)/dt - (b1*Up + b2*Upo + b3*Upoo);
 
     % Semi-implicit update of particle positions
-    upd_xp = - alpha*res_xp*dt/a1 + beta*upd_xp;
+    upd_xp = - alpha*res_xp*dt/a1;
     xp     = xp + upd_xp;
 
-    upd_zp = - alpha*res_zp*dt/a1 + beta*upd_zp;
+    upd_zp = - alpha*res_zp*dt/a1;
     zp     = zp + upd_zp;
 
     % Apply periodic boundary conditions
@@ -44,17 +44,10 @@ if step > 0
 end
 
 % ---------------------------------------------------------------------
-% UPDATE PARTICLE VELOCITIES (Wp, Up) AND MELT VELOCITIES (Wm, Um)
+% PROCESS PARTICLES AT NEW POSITIONS
 % ---------------------------------------------------------------------
 
-[fp,Wp,Up,Vp,Wm,Um,Vm,DWp,DUp,DVp,indp,indm] = phase_vel(Wc,Uc,xp,zp,rp,tp,Np,XX,ZZ,L,D);
-
-
-% ---------------------------------------------------------------------
-% UPDATE EQUILIBRIUM CONCENTRATIONS (Cq)
-% ---------------------------------------------------------------------
-
-[chi,Cq] = get_conc(rp,indp,kp2,Nz,Nx,Nt);
+[fp,Wp,Up,Vp,Pp,Wm,Um,Vm,Pm,DWp,DUp,DVp,DPp,indp,indm,Cq,chi] = process_part(Wc,Uc,P,xp,zp,rp,rm,tp,XX,ZZ,L,D,kp2);
 
 
 % -------------------------------------------------------------------------
@@ -133,72 +126,115 @@ Re = Vel .* rho .* D ./ eta;  % Reynolds number calculation
 % HELPER FUNCTIONS
 % -------------------------------------------------------------------------
 
-function [fp,Wp,Up,Vp,Wm,Um,Vm,DWp,DUp,DVp,indpt,indmt] = phase_vel(Wc,Uc,xp,zp,rp,tp,Np,XX,ZZ,L,D)
+function [fp,Wp,Up,Vp,Pp,Wm,Um,Vm,Pm,DWp,DUp,DVp,DPp,indp,indm,Cq,chi] = process_part(Wc,Uc,P,xp,zp,rp,rm,tp,XX,ZZ,L,D,kp2)
 
-Wp = zeros(sum(Np), 1);  Up = zeros(sum(Np), 1);  Vp = zeros(sum(Np), 1);
-Wm = zeros(sum(Np), 1);  Um = zeros(sum(Np), 1);  Vm = zeros(sum(Np), 1);
-fp = zeros(sum(Np), 1);
-rv = rp + D./sqrt(sum(Np));
+% % update particle indicator fields
+% [Nz,Nx] = size(Wc);
+% h       = D/Nz;
+% Nt      = length(Np);
+% indp    = zeros(Nz, Nx, Np);
+% indm    = zeros(Nz, Nx, Np);
+% for ip = 1:Np
+%     dx = mod(XX - xp(ip) + L/2, L) - L/2;
+%     dz = mod(ZZ - zp(ip) + D/2, D) - D/2;
+% 
+%     d = sqrt(dx.^2 + dz.^2);
+% 
+%     phi = rp(tp(ip)) - d;    % positive inside particle
+%     indp(:,:,ip) = 0.5*(1 + erf(phi/(sqrt(2)*h/2)));
+%     phi = rv(tp(ip)) - d;    % positive inside particle
+%     indm(:,:,ip) = 0.5*(1 + erf(phi/(sqrt(2)*h/2)));
+% end
+% indm = max(0,indm - indp);
 
 % update particle indicator fields
+Nt      = length(rp);
+Np      = length(xp);
 [Nz,Nx] = size(Wc);
-Nt      = length(Np);
-indp    = zeros(Nz, Nx, sum(Np));
-indm    = zeros(Nz, Nx, sum(Np));
-for ip = 1:sum(Np)
-    dx = mod(XX - xp(ip) + L/2, L) - L/2;
-    dz = mod(ZZ - zp(ip) + D/2, D) - D/2;
+h       = D/Nz;
+sgm     = h/4;
 
-    indp(:,:,ip) = (dx.^2 + dz.^2) < rp(tp(ip))^2;
-    indm(:,:,ip) = (dx.^2 + dz.^2) < rv(tp(ip))^2;
-end
-indm = max(0,indm - indp - sum(indp,3).*(1-indp));
-indp = indp + (diff(indp(:,[end-1,1:end,2],:),2,2) + diff(indp([end-1,1:end,2],:,:),2,1))/8;
-indm = indm + (diff(indm(:,[end-1,1:end,2],:),2,2) + diff(indm([end-1,1:end,2],:,:),2,1))/8;
+% precompute particle-specific radii
+rpart = rp(tp);
+rhalo = rm(tp);
 
-for ip = 1:sum(Np)
-    Wp(ip) = sum(Wc.*indp(:,:,ip),'all') ./ sum(indp(:,:,ip),'all');
-    Up(ip) = sum(Uc.*indp(:,:,ip),'all') ./ sum(indp(:,:,ip),'all');
+indp = zeros(Nz,Nx,Nt);
+indm = zeros(Nz,Nx,Nt);
+Cq   = zeros(Nz,Nx,Nt);
+
+Wp   = zeros(Np, 1);  Up = zeros(Np, 1);  Vp = zeros(Np, 1);  Pp = zeros(Np, 1);
+Wm   = zeros(Np, 1);  Um = zeros(Np, 1);  Vm = zeros(Np, 1);  Pm = zeros(Np, 1);
+fp   = zeros(Np, 1);
+
+for ip = 1:Np
+
+    % truncate stencil where erf contribution is negligible
+    Rsupp = rhalo(ip) + 5*sgm;
+
+    n = ceil(Rsupp/h);
+
+    % nearest grid indices to particle centre
+    ix0 = floor(xp(ip)/h) + 1;
+    iz0 = floor(zp(ip)/h) + 1;
+
+    % periodic stencil indices
+    ix = mod((ix0-n):(ix0+n)-1,Nx) + 1;
+    iz = mod((iz0-n):(iz0+n)-1,Nz) + 1;
+
+    % local coordinates
+    Xloc = XX(iz,ix);
+    Zloc = ZZ(iz,ix);
+
+    % exact periodic distances
+    dx = mod(Xloc - xp(ip) + L/2, L) - L/2;
+    dz = mod(Zloc - zp(ip) + D/2, D) - D/2;
+
+    d = hypot(dx,dz);
+
+    % smooth particle indicator
+    wp = 0.5*(1 + erf((rpart(ip) - d)/(sqrt(2)*sgm)));
+
+    % smooth halo indicator
+    wm = 0.5*(1 + erf((rhalo(ip) - d)/(sqrt(2)*sgm)));
+    wm = max(0, wm - wp);  % remove particle from melt halo
+
+    % smooth concentration field
+    wc = (1 + erf(min(0,rpart(ip) - d)/(sqrt(2)*sgm*4)));
+
+    % get particle and melt halo metrics
+    Wp(ip) = sum(Wc(iz,ix).*wp,'all') ./ sum(wp,'all');
+    Up(ip) = sum(Uc(iz,ix).*wp,'all') ./ sum(wp,'all');
     Vp(ip) = sqrt(Wp(ip).^2 + Up(ip).^2);
-    fp(ip) = sum(indp(:,:,ip),'all')./sum(ones(size(XX)),'all');
-    Wm(ip) = sum(Wc.*indm(:,:,ip),'all') ./ sum(indm(:,:,ip),'all');
-    Um(ip) = sum(Uc.*indm(:,:,ip),'all') ./ sum(indm(:,:,ip),'all');
+    Pp(ip) = sum(P (iz,ix).*wp,'all') ./ sum(wp,'all');
+    fp(ip) = sum(wp,'all')./sum(ones(size(Xloc)),'all');
+    Wm(ip) = sum(Wc(iz,ix).*wm,'all') ./ sum(wm,'all');
+    Um(ip) = sum(Uc(iz,ix).*wm,'all') ./ sum(wm,'all');
     Vm(ip) = sqrt(Wm(ip).^2 + Um(ip).^2);
+    Pm(ip) = sum(P (iz,ix).*wm,'all') ./ sum(wm,'all');
+
+    % accumulate global union fields
+    indp(iz,ix,tp(ip)) = max(indp(iz,ix,tp(ip)), wp);
+    indm(iz,ix,tp(ip)) = max(indm(iz,ix,tp(ip)), wm);
+    Cq  (iz,ix,tp(ip)) = max(Cq  (iz,ix,tp(ip)), wc);
+
 end
+
+indm = max(0, indm - sum(indp,3));
+Cq   = Cq.*(1-sum(indp,3)+indp);
 
 % Particle segregation speeds
 DWp = Wp - Wm;
 DUp = Up - Um;
 DVp = sqrt(DWp.^2 + DUp.^2);
+DPp = Pp - Pm;
 
-% Sum up particle indicator function by type
-indpt = zeros(Nz,Nx,Nt);
-indmt = zeros(Nz,Nx,Nt);
-for it=1:Nt
-    indpt(:,:,it) = min(1,sum(indp(:,:,tp==it),3));
-    indmt(:,:,it) = min(1,sum(indm(:,:,tp==it),3));
-end
-
-end
-
-function [chi,Cq] = get_conc(rp,indp,kp2,Nz,Nx,Nt)
-
+% Smoothed particle fraction
 chi = zeros(Nz,Nx,Nt);
-Cq  = zeros(Nz,Nx,Nt);
 
 for it=1:Nt
-    % rr = (2*rp(it));
-    % Gk = exp(-rr^2/2 * kp2);
-    % Cq(:,:,it) = ff.*real(ifft2(Gk .* fft2(indp(:,:,it))));
-    tmask = repmat(indp(:,:,it),3,3);
-    dist  = -bwdist(tmask);
-    Ct    = exp(-dist.^2/(2*2^2));
-    Cq(:,:,it) = Ct(Nz+1:2*Nz, Nx+1:2*Nx);
-    rr = (10*rp(it)/2);
+    rr = 10*rp(it);
     Gk = exp(-rr^2/2 * kp2);
     chi(:,:,it) = real(ifft2(Gk .* fft2(indp(:,:,it))));
 end
-for it=1:Nt
-    Cq(:,:,it) = Cq(:,:,it).*(1-sum(indp,3)+indp(:,:,it));
-end
+
 end

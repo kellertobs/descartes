@@ -68,17 +68,21 @@ ax(14) = axes(UN{:},'position',[axl+1*axw+1*ahs axb+0*axh+0*avs axw axh]);
 % plot velocity-pressure solution in Fig. 1
 set(0,'CurrentFigure',fh1)
 set(fh1,'CurrentAxes',ax(11));
-imagesc(Xsc,Zsc,-W(:      ,2:end-1)./SpeedScale); axis ij equal tight; box on; cb = colorbar;
+imagesc(Xsc,Zsc,-W(:      ,2:end-1)./SpeedScale); axis ij equal tight; box on; cb = colorbar; hold on;
+if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$W$ [',SpeedUnits,']'],TX{:},FS{:}); set(gca,'XTickLabel',[]); ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:});
 set(fh1,'CurrentAxes',ax(12));
-imagesc(Xsc,Zsc, U(2:end-1,:      )./SpeedScale); axis ij equal tight; box on; cb = colorbar;
+imagesc(Xsc,Zsc, U(2:end-1,:      )./SpeedScale); axis ij equal tight; box on; cb = colorbar; hold on;
+if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$U$ [',SpeedUnits,']'],TX{:},FS{:}); set(gca,'XTickLabel',[],'YTickLabel',[]);
 text(-0.1,1.1,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
 set(fh1,'CurrentAxes',ax(13));
 imagesc(Xsc,Zsc, P(2:end-1,2:end-1)); axis ij equal tight; box on; cb = colorbar;
+if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$P$ [Pa]'],TX{:},FS{:}); ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
 set(fh1,'CurrentAxes',ax(14));
 imagesc(Xsc,Zsc,rho(2:end-1,2:end-1)); axis ij equal tight; box on; cb = colorbar;
+if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$\rho$ [kg/m$^3$]'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:}); set(gca,'YTickLabel',[]);
 
 % initialize figure and axes
@@ -98,9 +102,10 @@ end
 % plot phase fractions
 for it=1:Nt
     set(fh2,'CurrentAxes',ax(20+it));
-    imagesc(Xsc,Zsc,chi(:,:,it)); axis ij equal tight; box on; cb = colorbar; colormap(ax(20+it),ocean);
+    imagesc(Xsc,Zsc,chi(:,:,it)); axis ij equal tight; box on; cb = colorbar; colormap(ax(20+it),colmap); hold on;
+    if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
     set(cb,TL{:},TS{:}); 
-    set(gca,TL{:},TS{:}); title(['$\chi$(',int2str(it),') [vol]'],TX{:},FS{:}); 
+    set(gca,TL{:},TS{:}); title([strp{it},' fraction [vol]'],TX{:},FS{:}); 
     xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
     if it==1
        ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:});
@@ -139,26 +144,8 @@ for it=1:Nt
     CRGB = CRGB +    C(:,:,it) .*permute(repmat(typeclrs(it,:).',1,Nz,Nx),[2 3 1]);
 end
 CRGB = CRGB + (1-sum(C,3)).*permute(repmat(typeclrs(end,:).',1,Nz,Nx),[2 3 1]);
-imagesc(Xsc,Zsc,CRGB); axis ij equal tight; box on; cb = colorbar; colormap(typeclrs); clim([-1 0]);
-hold on;
-if plot_crc
-    rv = rp + D./sqrt(sum(Np))/2;
-    for it = 1:Nt
-        idx = find(tp == it);
-        viscircles([xp(idx)   zp(idx)], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-        viscircles([xp(idx)   zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
-        viscircles([xp(idx)-L zp(idx)], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-        viscircles([xp(idx)-L zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
-        viscircles([xp(idx)+L zp(idx)], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-        viscircles([xp(idx)+L zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
-        viscircles([xp(idx) zp(idx)-D], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-        viscircles([xp(idx) zp(idx)-D], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
-        viscircles([xp(idx) zp(idx)+D], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-        viscircles([xp(idx) zp(idx)+D], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
-    end
-end
-xlim([0 L]);
-ylim([0 D]);
+imagesc(Xsc,Zsc,CRGB); axis ij equal tight; box on; cb = colorbar; colormap(typeclrs); clim([-1 0]); hold on;
+if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:},'Ticks',linspace(1/2/(Nt+1),1-1/2/(Nt+1),Nt+1),'TickLabels',strp); set(gca,TL{:},TS{:});
 title(['Melt Mixing'],TX{:},FS{:}); ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
 
@@ -168,15 +155,16 @@ imagesc(Xc,Zc,0.*rho); colormap(typeclrs(end,:)); axis equal tight; hold on; cb 
 k = 0;
 for it=1:Nt
     for ip=1:Np(it)
-        k = k+1;
-        is = max(1,floor(step/2):step);
-        shade = (is-is(1))/is(1);
+        k  = k+1;
+        is = max(1,floor(step/2):step).';
+        sh = (is-floor(step/2))/max(1,step-floor(step/2));
         x1 = HST.pos(is,k,2);
         z1 = HST.pos(is,k,1);
-        scatter(x1,z1,(rp(it)*200/D).^2,typeclrs(it,:).*shade.'+typeclrs(end,:).*(1-shade.'),'filled','MarkerFaceAlpha','flat','AlphaData',shade.^4,'AlphaDataMapping','none');
-        scatter(x1(end),z1(end),(rp(it)*500/D).^2,typeclrs(it,:),'filled');
+        scatter(x1,z1,(rp(it)/D*100).^2,typeclrs(it,:).*sh+typeclrs(end,:).*(1-sh),'filled','MarkerFaceAlpha','flat','AlphaData',sh.^4,'AlphaDataMapping','none');
+        scatter(x1(end),z1(end),(rp(it)/D*400).^2,typeclrs(it,:),'filled');
     end
 end
+if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 xlim([0 L]);
 ylim([0 D]);
 set(cb,TL{:},TS{:},'Ticks',linspace(-1+1/2/(Nt+1),-1/2/(Nt+1),Nt+1),'TickLabels',strp); set(gca,TL{:},TS{:});
@@ -272,7 +260,7 @@ end
 % plot phase speed histograms in Fig. 6
 set(0,'CurrentFigure',fh6)
 wbin = (max([Wp(:);Wm(:)])-min([Wp(:);Wm(:)]))/SpeedScale/25;
-limx = [min(-[Wp(:);Wm(:)]),max(-[Wp(:);Wm(:)])]/SpeedScale;
+limx = [min(-[Wp(:);Wm(:)])/SpeedScale-wbin,max(-[Wp(:);Wm(:)])/SpeedScale+wbin];
 for it=1:Nt
     set(fh6,'CurrentAxes',ax(60+it));
     histogram(-Wp(tp==it)./SpeedScale,'BinWidth',wbin,'FaceColor',typeclrs(it,:),'FaceAlpha',0.7); axis tight; box on; hold on
@@ -292,7 +280,7 @@ drawnow
 if save_op && ~restart
     name = [outdir,'/',runID,'/',runID,'_sol_',num2str(floor(step/nop))];
     print(fh1,name,'-dpng','-r300','-image');
-    name = [outdir,'/',runID,'/',runID,'_mix_',num2str(floor(step/nop))];
+    name = [outdir,'/',runID,'/',runID,'_chi_',num2str(floor(step/nop))];
     print(fh2,name,'-dpng','-r300','-image');
     name = [outdir,'/',runID,'/',runID,'_trc_',num2str(floor(step/nop))];
     print(fh3,name,'-dpng','-r300','-image');
@@ -316,4 +304,23 @@ if save_op && (step==0 || restart)
     logfile = [outdir,'/',runID,'/',runID,'.log'];
     if exist(logfile,'file') && step==0; delete(logfile); end
     diary(logfile)
+end
+
+function plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L)
+
+rv = rp + D/2/sqrt(sum(Np));
+for it = 1:Nt
+    idx = find(tp == it);
+    viscircles([xp(idx)   zp(idx)], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
+    viscircles([xp(idx)   zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx)-L zp(idx)], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
+    viscircles([xp(idx)-L zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx)+L zp(idx)], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
+    viscircles([xp(idx)+L zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx) zp(idx)-D], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
+    viscircles([xp(idx) zp(idx)-D], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx) zp(idx)+D], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
+    viscircles([xp(idx) zp(idx)+D], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+end
+
 end
