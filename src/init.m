@@ -54,6 +54,19 @@ switch colourmap
 end
 cmap = typeclrs;
 
+% get characteristic scales and non-dimensional numbers
+w0l    =  abs(rhop-rhom).*grav.*rp.^2./etam;                % laminar particle settling speeds
+w0t    =  sqrt(abs(rhop-rhom).*grav.*rp./(10.*rhom));       % turbulent particle settling speeds
+W0l    =  sum(fp./10.*abs(rhop-rhom)).*grav.*D.^2./etam;    % laminar convection speed
+W0t    =  sqrt(sum(fp./10.*abs(rhop-rhom)).*grav.*D./rhom); % turbulent convection speed
+
+Rcl    =  W0l./w0l;                      % laminar convection number
+Rct    =  W0t./w0t;                      % turbulent convection number
+Repl   =  w0l.*rhom.* rp   ./etam;       % laminar particle Reynolds numbers
+ReDl   =  W0l.*rhom.*(D/10)./etam;       % laminar domain Reynolds number
+Rept   =  w0t.*rhom.* rp   ./etam;       % turbulent particle Reynolds numbers
+ReDt   =  W0t.*rhom.*(D/10)./etam;       % turbulent domain Reynolds number
+
 % Set boundary conditions for advection (periodic by default)
 BCA = {'periodic', 'periodic'};  % Boundary condition on advection (top/bot, sides)
 BCD = {'periodic', 'periodic'};  % Boundary condition for diffusion (top/bot, sides)
@@ -126,7 +139,10 @@ Uc  = (U(:,1:end-1) + U(:,2:end)) / 2;
 Vel = sqrt(Wc.^2 + Uc.^2);
 
 % Initialize particle fields
-[xp, zp, tp, Np] = generate_particles(Nt, rp, fp, D, L, pord);
+[xp, zp, tp, Np] = generate_particles(Nt, rp, fp, D, L, ptol);
+
+% Set melt halo radius
+rm = rp + D/2/sqrt(sum(Np));
 
 % Initialize particle velocity arrays
 Wp = zeros(sum(Np), 1); Wpo = Wp; Wm = Wp;
@@ -239,6 +255,7 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
 
         % Calculate number of particles of type t based on area fraction
         Np(t) = round(target_area / (pi * rp(t)^2));
+        mean_dist = sqrt(domain_area/sum(Np(1:t)));
         
         for i = 1:Np(t)
             placed = false;
@@ -256,7 +273,8 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
                 overlaps = false;
                 
                 for j = 1:length(px)
-                    min_dist = tol * (rp(t) + rp(pt(j))/2);  % Minimum distance between particles (scaled by tolerance)
+                    min_dist = (rp(t) + rp(pt(j))/2);  % Minimum distance between particles (scaled by tolerance)
+                    tol_dist = tol*mean_dist + (1-tol)*min_dist;
 
                     % Calculate distance with periodic boundaries in both x and z directions
                     dx = abs(x - px(j));
@@ -269,9 +287,9 @@ function [px, pz, pt, Np] = generate_particles(Nt, rp, fp, D, L, tol)
                     % Calculate the Euclidean distance considering periodicity
                     dist = sqrt(dx^2 + dz^2);
 
-                    if any(dist(:) < min_dist)
+                    if any(dist(:) < tol_dist)
                         overlaps = true;
-                        tol      = (1-1e-6)*tol;
+                        tol      = max(0,(1-1e-6)*tol);
                         break;
                     end
                 end

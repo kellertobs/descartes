@@ -2,19 +2,18 @@
 clear; close all;
 
 % Set Run control and I/O parameters
-runID    =  'demo';              % run identifier
+runID    =  'twophs';            % run identifier
 outdir   = '../out/';            % output directory
 srcdir   = '../src/';            % source directory
 restart  =  0;                   % restart from file (0: new run; <1: restart from last; >1: restart from specified frame)
 nop      =  10;                  % output frame plotted/saved every 'nop' time steps
 plot_op  =  1;                   % switch on to live plot results
-plot_crc =  1;
+plot_crc =  0;
 save_op  =  1;                   % switch on to save output to file
-colourmap = 'ocean';
+colourmap = 'lapaz';
 
-load ../src/colmap/ocean.mat;
-typeclrs = ocean([195,20,160],:).*1.1;
-typeclrs = [typeclrs;[0.95 0.90 0.85]];
+load ../src/colmap/lapaz.mat;
+typeclrs = lapaz([24,120,240],:);
 
 % Set model domain parameters
 D        =  1;                   % chamber depth [m]
@@ -29,27 +28,24 @@ CFL      =  1.00;                % (physical) time stepping Courant-Friedrich-Le
 
 % Set physical model parameters
 grav     =  10;                              % gravity [m/s2]
-ptol     =  0.5;                               % particle ordering tolerance (larger for more regular distribution)
+ptol     =  0.9;                             % particle ordering tolerance (0-1, larger for more regular distribution)
 seed     =  15;                              % random number generator seed for reproducibility
-Nt       =  3;                               % number of particle types
-rp       =  [0.02,0.015,0.01];               % particle radius [m]
-fp       =  [0.02,0.03,0.01];                % particle fraction [vol]
-rhop     =  [3200,2600,4200];                % particle density [kg/m3]
-strp     =  {'pxn','plg','spn','mlt'};       % name strings for particle and fluid phases
-rhom     =  2800;                            % melt density [kg/m3]
+Nt       =  2;                               % number of particle types
+rp       =  [0.01,0.01];                     % particle radius [m]
+fp       =  [0.01,0.01];                     % particle fraction [vol]
+rhop     =  [3200,2600];                     % particle density [kg/m3]
+strp     =  {'olv','plg','mlt'};             % name strings for particle and fluid phases
+rhom     =  2900;                            % melt density [kg/m3]
 etap     =  1e6;                             % particle-melt viscosity contrast [Pas]
 etam     =  1e1;                             % melt viscosity [Pas]
-DW0      =  (rhop-rhom).*grav.*rp.^2./etam;  % Stokes particle settling speeds
-Rep      =  DW0.*(rhop-rhom).*rp./etam;      % particle Reynolds numbers
 
 % Set numerical model parameters
 TINT     =  'bd2im';             % time integration scheme ('be1im','bd2im','cn2si','bd2si')
 ADVN     =  'weno5';             % advection scheme ('centr','upw1','quick','fromm','weno3','weno5','tvdim')
-rtol     =  1e-4;                % relative nonlinear residual tolerance
+rtol     =  1e-3;                % relative nonlinear residual tolerance
 atol     =  1e-7;                % absolute nonlinear residual tolerance
 maxit    =  6;                   % maximum outer its
 alpha    =  0.95;                % iterative update step size parameter
-beta     =  0.00;                % iterative update damping parameter
 
 %*****  RUN DESCARTES MODEL  **********************************************
 run([srcdir,'main'])
