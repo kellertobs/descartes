@@ -56,7 +56,7 @@ cmap = typeclrs;
 
 % get characteristic scales and non-dimensional numbers
 w0l    =  abs(rhop-rhom).*grav.*rp.^2./etam;                   % laminar particle settling speeds
-w0t    =  sqrt(abs(rhop-rhom).*grav.*rp./(10.*rhom));          % turbulent particle settling speeds
+w0t    =  sqrt(abs(rhop-rhom).*grav.*rp./rhom);                % turbulent particle settling speeds
 W0l    =  sum(fp./10.*abs(rhop-rhom)).*grav.*(D/10).^2./etam;  % laminar convection speed
 W0t    =  sqrt(sum(fp./10.*abs(rhop-rhom)).*grav.*D./rhom);    % turbulent convection speed
 
