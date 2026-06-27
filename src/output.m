@@ -69,20 +69,20 @@ ax(14) = axes(UN{:},'position',[axl+1*axw+1*ahs axb+0*axh+0*avs axw axh]);
 set(0,'CurrentFigure',fh1)
 set(fh1,'CurrentAxes',ax(11));
 imagesc(Xsc,Zsc,-W(:      ,2:end-1)./SpeedScale); axis ij equal tight; box on; cb = colorbar; hold on;
-if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
+if plot_crc; plot_circles(xp,zp,rp,rm,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$W$ [',SpeedUnits,']'],TX{:},FS{:}); set(gca,'XTickLabel',[]); ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:});
 set(fh1,'CurrentAxes',ax(12));
 imagesc(Xsc,Zsc, U(2:end-1,:      )./SpeedScale); axis ij equal tight; box on; cb = colorbar; hold on;
-if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
+if plot_crc; plot_circles(xp,zp,rp,rm,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$U$ [',SpeedUnits,']'],TX{:},FS{:}); set(gca,'XTickLabel',[],'YTickLabel',[]);
 text(-0.1,1.1,['time = ',num2str(time/TimeScale,3),' [',TimeUnits,']'],TX{:},FS{:},'Color','k','HorizontalAlignment','center','Units','normalized');
 set(fh1,'CurrentAxes',ax(13));
 imagesc(Xsc,Zsc, P(2:end-1,2:end-1)); axis ij equal tight; box on; cb = colorbar;
-if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
+if plot_crc; plot_circles(xp,zp,rp,rm,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$P$ [Pa]'],TX{:},FS{:}); ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
 set(fh1,'CurrentAxes',ax(14));
 imagesc(Xsc,Zsc,rho(2:end-1,2:end-1)); axis ij equal tight; box on; cb = colorbar;
-if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
+if plot_crc; plot_circles(xp,zp,rp,rm,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:}); set(gca,TL{:},TS{:}); title(['$\rho$ [kg/m$^3$]'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:}); set(gca,'YTickLabel',[]);
 
 % initialize figure and axes
@@ -103,7 +103,7 @@ end
 for it=1:Nt
     set(fh2,'CurrentAxes',ax(20+it));
     imagesc(Xsc,Zsc,chi(:,:,it)); axis ij equal tight; box on; cb = colorbar; colormap(ax(20+it),colmap); hold on;
-    if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
+    if plot_crc; plot_circles(xp,zp,rp,rm,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
     set(cb,TL{:},TS{:}); 
     set(gca,TL{:},TS{:}); title([strp{it},' fraction [vol]'],TX{:},FS{:}); 
     xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
@@ -145,7 +145,7 @@ for it=1:Nt
 end
 CRGB = CRGB + (1-sum(C,3)).*permute(repmat(typeclrs(end,:).',1,Nz,Nx),[2 3 1]);
 imagesc(Xsc,Zsc,CRGB); axis ij equal tight; box on; cb = colorbar; colormap(typeclrs); clim([-1 0]); hold on;
-if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
+if plot_crc; plot_circles(xp,zp,rp,rm,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 set(cb,TL{:},TS{:},'Ticks',linspace(1/2/(Nt+1),1-1/2/(Nt+1),Nt+1),'TickLabels',strp); set(gca,TL{:},TS{:});
 title(['Melt Mixing'],TX{:},FS{:}); ylabel(['Depth [',SpaceUnits,']'],TX{:},FS{:}); xlabel(['Width [',SpaceUnits,']'],TX{:},FS{:});
 
@@ -164,7 +164,7 @@ for it=1:Nt
         scatter(x1(end),z1(end),(rp(it)/D*400).^2,typeclrs(it,:),'filled');
     end
 end
-if plot_crc; plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
+if plot_crc; plot_circles(xp,zp,rp,rm,tp,Np,Nt,typeclrs,D,L); xlim([0 L]); ylim([0 D]); end
 xlim([0 L]);
 ylim([0 D]);
 set(cb,TL{:},TS{:},'Ticks',linspace(-1+1/2/(Nt+1),-1/2/(Nt+1),Nt+1),'TickLabels',strp); set(gca,TL{:},TS{:});
@@ -306,21 +306,20 @@ if save_op && (step==0 || restart)
     diary(logfile)
 end
 
-function plot_circles(xp,zp,rp,tp,Np,Nt,typeclrs,D,L)
+function plot_circles(xp,zp,rp,rm,tp,Np,Nt,typeclrs,D,L)
 
-rv = rp + D/2/sqrt(sum(Np));
 for it = 1:Nt
     idx = find(tp == it);
     viscircles([xp(idx)   zp(idx)], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-    viscircles([xp(idx)   zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx)   zp(idx)], rm(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
     viscircles([xp(idx)-L zp(idx)], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-    viscircles([xp(idx)-L zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx)-L zp(idx)], rm(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
     viscircles([xp(idx)+L zp(idx)], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-    viscircles([xp(idx)+L zp(idx)], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx)+L zp(idx)], rm(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
     viscircles([xp(idx) zp(idx)-D], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-    viscircles([xp(idx) zp(idx)-D], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx) zp(idx)-D], rm(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
     viscircles([xp(idx) zp(idx)+D], rp(it),'Color',typeclrs(it,:),'LineWidth',1.0);
-    viscircles([xp(idx) zp(idx)+D], rv(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
+    viscircles([xp(idx) zp(idx)+D], rm(it),'Color',[0 0 0],'LineStyle',':','LineWidth',0.5,'EnhanceVisibility',0);
 end
 
 end

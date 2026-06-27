@@ -145,7 +145,7 @@ Vel = sqrt(Wc.^2 + Uc.^2);
 [xp, zp, tp, Np] = generate_particles(Nt, rp, fp, D, L, ptol);
 
 % Set melt halo radius
-rm = rp + D/2/sqrt(sum(Np));
+rm = rp + D/2/sqrt(sum(Np)) * rm_fact;
 
 % Initialize particle velocity arrays
 Wp = zeros(sum(Np), 1); Wpo = Wp; Wm = Wp;
